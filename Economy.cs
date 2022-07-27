@@ -315,6 +315,14 @@ namespace MothBot
         {
             var eb = new EmbedBuilder();
             eb.WithColor(72, 139, 48);
+            if (recipient.IsBot)
+            {
+                eb.WithColor(224, 33, 33);
+                eb.WithDescription("You can't gift to a bot!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            Func.UserFailsafe(recipient.Id);
             if (mothAmount < 1)
             {
                 eb.WithColor(224, 33, 33);
