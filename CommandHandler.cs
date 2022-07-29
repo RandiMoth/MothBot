@@ -657,6 +657,7 @@ namespace MothBot
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
         }
     }
+    [RequireOwner(ErrorMessage = "you can't do this unless you're Randi lol")]
     public class DeveloperTest : ModuleBase<SocketCommandContext>
     {
         [Command("menuTest")]
