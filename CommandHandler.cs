@@ -671,7 +671,7 @@ namespace MothBot
             if (chanName.StartsWith("<#") && chanName.EndsWith(">"))
                 chanName = chanName.Substring(2, chanName.Length - 3);
             SocketGuild guild;
-            if (Context.Guild.Id == 608912123317321738)
+            if (Context.Guild.Id == 496015504516055042)
                 guild = Context.Client.GetGuild(608912123317321738);
             else
                 guild = Context.Guild;

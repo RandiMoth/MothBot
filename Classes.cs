@@ -269,12 +269,14 @@ namespace MothBot
         }
         public static void writeDynamicInfo(string folder)
         {
-            var f = File.CreateText(folder + "guild_info.yaml");
             var serializer = new SerializerBuilder().Build();
-            f.WriteLine(serializer.Serialize(guildsDict));
+            var stringToWrite = serializer.Serialize(guildsDict);
+            var stringToWrite2 = serializer.Serialize(usersDict);
+            var f = File.CreateText(folder + "guild_info.yaml");
+            f.WriteLine(stringToWrite);
             f.Close();
             f = File.CreateText(folder + "user_info.yaml");
-            f.WriteLine(serializer.Serialize(usersDict));
+            f.WriteLine(stringToWrite2);
             f.Close();
         }
         private static async void CreateBackupTimer()
