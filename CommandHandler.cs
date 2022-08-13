@@ -656,7 +656,50 @@ namespace MothBot
                 eb.WithColor(c);
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
         }
+        [Command("pokeSpawn")]
+        [Summary("Spawns a pokemon in the style of Poketwo that can't be caught.\n\nUsage: `m!pokespawn #channel <URL>`")]
+        private async Task arceSpawnAsync(string chanName = "", string URL = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            if (chanName == "" || URL == "")
+            {
+                eb.WithDescription("Please specify both the channel and the image URL with `m!pokespawn #channel <URL>`");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+            }
+            ISocketMessageChannel chan = Context.Channel;
+            if (chanName.StartsWith("<#") && chanName.EndsWith(">"))
+                chanName = chanName.Substring(2, chanName.Length - 3);
+            SocketGuild guild;
+            if (Context.Guild.Id == 608912123317321738)
+                guild = Context.Client.GetGuild(608912123317321738);
+            else
+                guild = Context.Guild;
+            //Console.WriteLine(guild);
+            try
+            {
+                chan = (ISocketMessageChannel)guild.GetChannel(Convert.ToUInt64(chanName));
+            }
+            catch (FormatException)
+            {
+                eb.WithDescription($"Failed to convert {chanName} to a channel ID.");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            if (chan == null)
+            {
+                eb.WithDescription($"Failed to find a channel with the ID of {chanName}.");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            eb.WithTitle("A wild pokémon has appeared!");
+            eb.WithDescription("Guess the pokémon and type `p!catch <pokémon>` to catch it!");
+            eb.WithColor(254, 154, 201);
+            eb.WithImageUrl(URL);
+            await chan.SendMessageAsync("", false, eb.Build());
+        }
     }
+    [Name("Developer commands")]
     [RequireOwner(ErrorMessage = "you can't do this unless you're Randi lol")]
     public class DeveloperTest : ModuleBase<SocketCommandContext>
     {
