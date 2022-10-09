@@ -82,12 +82,15 @@ namespace MothBot
             _client.SelectMenuExecuted += HandleSelectAsync;
             _client.ReactionAdded += ReactionAdded;
             _client.ReactionRemoved += ReactionRemoved;
-            _client.Ready += () =>
+            _client.Ready += async () =>
             {
                 Console.WriteLine("Bot is connected!");
-                return Task.CompletedTask;
+                await _client.SetGameAsync("moth identifier 9000");
+                var guild = _client.GetGuild(608912123317321738);
+                var channel = (ISocketMessageChannel)guild.GetChannel(935420527051419688);
+                await channel.SendMessageAsync("MothBot is now online.");
+                return;
             };
-
             // Block this task until the program is closed.
             await Task.Delay(-1);
         }

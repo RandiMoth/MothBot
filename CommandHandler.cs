@@ -5,18 +5,21 @@ using Discord.WebSocket;
 using Reddit.Controllers;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms.Design;
 using YamlDotNet.RepresentationModel;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace MothBot
 {
     public class Func
     {
-
+        private enum states { NOT_IN_QUOTES, IN_QUOTES, ESCAPE_CHAR }
         public static string ConvertEmojis(string str)
         {
             foreach (var x in ClassSetups.emojisDict)
@@ -142,6 +145,119 @@ namespace MothBot
             if (!ClassSetups.guildsDict.ContainsKey(guildID))
                 ClassSetups.guildsDict.Add(guildID, new Guild());
         }
+        public static DateTimeOffset DiscordIDToTimestamp(ulong ID)
+        {
+            long time = (long)(ID >> 22) + 1420070400000;
+            return DateTimeOffset.FromUnixTimeMilliseconds(time);
+        }
+        public static string TimestampToHumanFormat(DateTimeOffset time)
+        {
+            string desc = $"{time.TimeOfDay.ToString("hh")}:{time.TimeOfDay.ToString("mm")}:{time.TimeOfDay.ToString("ss")} of the {time.Day}";
+            switch (time.Day)
+            {
+                case 1:
+                case 21:
+                case 31:
+                    desc += "st";
+                    break;
+                case 2:
+                case 22:
+                    desc += "nd";
+                    break;
+                case 3:
+                case 23:
+                    desc += "rd";
+                    break;
+                default:
+                    desc += "th";
+                    break;
+            }
+            desc += $" of {time.ToString("MMMM", CultureInfo.InvariantCulture)}, {time.Year}";
+            return desc;
+        }
+        public static List<string> parseQuotes(string str)
+        {
+            states state = states.NOT_IN_QUOTES;
+            var result = new List<string>();
+            string cur_string = "";
+            foreach (char c in str)
+            {
+                switch (state)
+                {
+                    case states.NOT_IN_QUOTES:
+                        switch (c)
+                        {
+                            case '\"':
+                            case '“':
+                            case '”':
+                                state = states.IN_QUOTES;
+                                result.Add(cur_string);
+                                cur_string = "";
+                                break;
+                            case '\\':
+                                state = states.ESCAPE_CHAR;
+                                break;
+                            default:
+                                cur_string += c;
+                                break;
+                        }
+                        break;
+                    case states.IN_QUOTES:
+                        switch (c)
+                        {
+                            case '\"':
+                            case '“':
+                            case '”':
+                                state = states.NOT_IN_QUOTES;
+                                result.Add(cur_string);
+                                cur_string = "";
+                                break;
+                            case '\\':
+                                state = states.ESCAPE_CHAR;
+                                break;
+                            default:
+                                cur_string += c;
+                                break;
+                        }
+                        break;
+                    case states.ESCAPE_CHAR:
+                        state = states.IN_QUOTES;
+                        cur_string += c;
+                        break;
+                }
+            }
+            result.Add(cur_string);
+            result.ForEach(s => s = s.Trim());
+            result.RemoveAll(s => s.Trim() == "");          // DO NOT REMOVE .TRIM() OR IT BREAKS
+            return result;
+        }
+        public static Emoji? getKeycapEmoji(int i)
+        {
+            switch (i)
+            {
+                case 1:
+                    return new Emoji("1️⃣");
+                case 2:
+                    return new Emoji("2️⃣");
+                case 3:
+                    return new Emoji("3️⃣");
+                case 4:
+                    return new Emoji("4️⃣");
+                case 5:
+                    return new Emoji("5️⃣");
+                case 6:
+                    return new Emoji("6️⃣");
+                case 7:
+                    return new Emoji("7️⃣");
+                case 8:
+                    return new Emoji("8️⃣");
+                case 9:
+                    return new Emoji("9️⃣");
+                case 10:
+                    return new Emoji("🔟");
+            }
+            return null;
+        }
     }
     public class HelpHandler : ModuleBase<SocketCommandContext>
     {
@@ -179,7 +295,7 @@ namespace MothBot
                 var menuBuilder = new SelectMenuBuilder().WithPlaceholder("Select a command category").WithCustomId("helpMenu").WithMinValues(1).WithMaxValues(1);
                 foreach (var module in _service.Modules)
                 {
-                    if (module.Name == "HelpHandler" || module.Name == "DeveloperTest" || (module.Name == "Admin" && !((SocketGuildUser)Context.User).GuildPermissions.ManageGuild))
+                    if (module.Name == "HelpHandler" || module.Name == "Developer commands" || (module.Name == "Admin" && !((SocketGuildUser)Context.User).GuildPermissions.ManageGuild))
                         continue;
                     if (module.Name == "General commands")
                         menuBuilder = menuBuilder.AddOption(module.Name, module.Name, module.Summary, isDefault: true);
@@ -394,7 +510,7 @@ namespace MothBot
             }
         }
         [Command("react")]
-        [Summary("Reacts to a message.\n\nUsage: `m!react <Emoji> <Message>")]
+        [Summary("Reacts to a message.\n\nUsage: `m!react <message link> <emoji>`")]
         public async Task ReactAsync([Summary("Channel")] string messageLink = "", [Remainder][Summary("The emoji to react with")] string emojiName = "")
         {
             var eb = new EmbedBuilder();
@@ -405,7 +521,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            if (!Regex.IsMatch(messageLink, @"\Ahttps://discord.com/channels/\d{18,19}/\d{18,19}/\d{18,19}\Z"))
+            if (!Regex.IsMatch(messageLink, @"\Ahttps://discord.com/channels/\d*/\d*/\d*\Z"))
             {
                 eb.WithDescription("Please enter a valid message link!");
                 eb.WithColor(224, 33, 33);
@@ -666,6 +782,7 @@ namespace MothBot
             {
                 eb.WithDescription("Please specify both the channel and the image URL with `m!pokespawn #channel <URL>`");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
             }
             ISocketMessageChannel chan = Context.Channel;
             if (chanName.StartsWith("<#") && chanName.EndsWith(">"))
@@ -698,35 +815,142 @@ namespace MothBot
             eb.WithImageUrl(URL);
             await chan.SendMessageAsync("", false, eb.Build());
         }
+        [Command("date")]
+        [Summary("Converts the Discord ID to a date.\n\nUsage: `m!date <ID>`")]
+        private async Task dateAsync(ulong discordID = 0)
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(254, 154, 201);
+            if (discordID == 0)
+            {
+                var currentTime = DateTimeOffset.UtcNow;
+                eb.WithDescription($"The current time by the Coordinated Universal Time is {Func.TimestampToHumanFormat(currentTime)}");
+                await Context.Channel.SendMessageAsync("", false, eb.Build());
+                return;
+            }
+            var time = Func.DiscordIDToTimestamp(discordID);
+            eb.WithDescription($"This discord ID originates from {Func.TimestampToHumanFormat(time)} by the Coordinated Universal Time");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        [Command("poll")]
+        [Summary("Creates a poll with the specified options.\n\nUsage: `m!date <ID>")]
+        private async Task pollAsync([Remainder] string pollOptionsRaw = "")
+        {
+            var pollOptions = Func.parseQuotes(pollOptionsRaw);
+            Console.WriteLine(pollOptionsRaw);
+            foreach (var x in pollOptions)
+                Console.WriteLine(x);
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            if (pollOptions.Count < 3||pollOptions.Count>11)
+            {
+                eb.WithDescription("Make sure that the poll includes a title and between 2 and 10 options, inclusionary.");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ulong currentTime = (ulong)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var user = (SocketGuildUser)Context.User;
+            if (!user.GuildPermissions.ManageGuild)
+            {
+                if (currentTime - ClassSetups.guildsDict[Context.Guild.Id].LastPoll < 60)
+                {
+                    eb.WithDescription("A poll was already posted in the last minute. To prevent spam, this has been restricted.");
+                    await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                    return;
+                }
+                if (currentTime - ClassSetups.usersDict[user.Id].LastTimes.Poll < 18000)
+                {
+                    eb.WithDescription("A poll was already made by you in the last 5 hours. To prevent spam, this has been restricted.");
+                    await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                    return;
+                }
+            }
+            string desc = "";
+            for (int i = 1; i < pollOptions.Count; i++)
+            {
+                var emote = Func.getKeycapEmoji(i);
+                desc += $"{emote} {Func.ConvertEmojis(pollOptions[i])}\n\n";
+            }
+            desc.TrimEnd();
+            eb.WithColor(51, 127, 213);
+            eb.WithTitle(Func.ConvertEmojis(pollOptions[0]));
+            eb.WithDescription(desc);
+            eb.WithFooter($"This poll was created by {Context.User.Username}#{Context.User.Discriminator}");
+            var channel = (ISocketMessageChannel)Context.Guild.GetChannel(825980405239906374);
+            var message = await channel.SendMessageAsync("", false, eb.Build());
+            Thread childThread = new Thread(() => PollReaction(message, pollOptions.Count));
+            childThread.Start();
+            ClassSetups.guildsDict[Context.Guild.Id].LastPoll = currentTime;
+            ClassSetups.usersDict[Context.User.Id].LastTimes.Poll = currentTime;
+            eb = new EmbedBuilder();
+            eb.WithColor(51, 127, 213);
+            eb.WithTitle("The poll has been sent.");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        private async void PollReaction(RestUserMessage message, int reactCount)
+        {
+            var channel = (SocketTextChannel)message.Channel;
+            for (int i = 1; i < reactCount; i++)
+            {
+                var emote = Func.getKeycapEmoji(i);
+                await message.AddReactionAsync(emote);
+            }
+            var thread = await channel.CreateThreadAsync(message.Embeds.First().Title, autoArchiveDuration: ThreadArchiveDuration.OneDay, message: message);
+            await thread.SendMessageAsync("Discuss this poll in the thread, such as why you've picked an option. If the poll has an \"Other\" option, you can say what you've picked that doesn't fall in the options.");
+        }
     }
     [Name("Developer commands")]
     [RequireOwner(ErrorMessage = "you can't do this unless you're Randi lol")]
     public class DeveloperTest : ModuleBase<SocketCommandContext>
     {
-        [Command("menuTest")]
-        [Summary("how did you learn of this?")]
-        private async Task menuTestAsync([Remainder()] string s = "")
+        [Command("ai_will_do")]
+        [Summary("hi den")]
+        private async Task ai_will_doAsync([Remainder()] string s = "")
         {
-            var menuBuilder = new SelectMenuBuilder()
-                .WithPlaceholder("Select a topic")
-                .WithCustomId("menu-1")
-                .WithMinValues(1)
-                .WithMaxValues(1)
-                .AddOption("General", "opt-a", "Issues that wouldn't fit elsewhere")
-                .AddOption("Localisation", "opt-b", "Issues related to displaying text");
-
-            var builder = new ComponentBuilder()
-                .WithSelectMenu(menuBuilder);
-            await Context.Channel.SendMessageAsync("components testing stuff", components: builder.Build());
-            var childref = new ThreadStart(WaitAndSendMessage);
-            Thread childThread = new Thread(childref);
-            childThread.Start();
-        }
-        private async void WaitAndSendMessage()
-        {
-            int sleepfor = 2000;
-            Thread.Sleep(sleepfor);
-            await Context.Channel.SendMessageAsync("This message is a part of the m![REDACTED] command set to appear one second later");
+            var ai_list = new List<double>();
+            foreach (var c in s.Split())
+                ai_list.Add(Convert.ToDouble(c));
+            var chance = ai_list[0];
+            if (chance <= 0)
+            {
+                await Context.Channel.SendMessageAsync("This focus won't be picked.");
+                return;
+            }
+            ai_list.Remove(chance);
+            ai_list.RemoveAll(t => t <= 0);
+            ai_list.Sort();
+            Console.WriteLine($"Calculating chance of {chance}, with other focuses being {string.Join(' ',ai_list)}");
+            int power = ai_list.Count;
+            if (power == 0)
+            {
+                await Context.Channel.SendMessageAsync("This focus will always be picked.");
+                return;
+            }
+            double denominator = ai_list.Aggregate((a, x) => a * x);
+            double lowbound;
+            double highbound = 0;
+            double result = 0;
+            for (int i = 0; i<ai_list.Count; i++)
+            {
+                lowbound = highbound;
+                highbound = Math.Min(ai_list[i],chance);
+                Console.WriteLine($"Calculating integral from {lowbound} to {highbound}");
+                result += (Math.Pow(highbound, power + 1) - Math.Pow(lowbound, power + 1)) / (denominator * (power + 1));
+                Console.WriteLine($"Result becomes {result}");
+                if (highbound == chance)
+                    break;
+                denominator /= highbound;
+                power--;
+                if (i == ai_list.Count-1)
+                {
+                    Console.WriteLine($"Calculating integral from {highbound} to {chance}");
+                    result += chance;
+                    result -= highbound;
+                    Console.WriteLine($"Result becomes {result}");
+                }
+            }
+            result /= chance;
+            await Context.Channel.SendMessageAsync($"The chance of the focus of being picked is approximately {Math.Round(result*100,2)}%.");
         }
         [Command("forceOverwrite")]
         [Summary("how did you learn of this?")]
@@ -747,10 +971,16 @@ namespace MothBot
         }
         [Command("DMessage")]
         [Summary("how did you learn of this?")]
-        private async Task dmessageAsynd(ulong userID, [Remainder()] string message)
+        private async Task dmessageAsynd(ulong userID, [Remainder()] string message = " ")
         {
             SocketUser? user = null;
             var eb = new EmbedBuilder();
+            if (message.Trim() == "")
+            {
+                eb.WithDescription("Message cannot have no text. If you want to sent an embed, you'll have to add text either way.");
+                await ReplyAsync("", false, eb.Build());
+                return;
+            }
             foreach (SocketGuild guild in Context.Client.Guilds)
             {
                 user = guild.GetUser(userID);
@@ -763,7 +993,16 @@ namespace MothBot
                 await ReplyAsync("", false, eb.Build());
                 return;
             }
-            var result = user.SendMessageAsync(message);
+            Attachment? attach = null;
+            Task<IUserMessage> result;
+            if (Context.Message.Attachments.Count > 0)
+            {
+                attach = Context.Message.Attachments.First();
+                eb.WithImageUrl(attach.Url);
+                result = user.SendMessageAsync(message, embed: eb.Build());
+            }
+            else
+                result = user.SendMessageAsync(message);
             result.Wait();
             if (!result.IsCompleted)
             {

@@ -6,6 +6,7 @@ using Reddit.Controllers;
 using Reddit.Inputs;
 using System;
 using System.Collections.Generic;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -52,6 +53,7 @@ namespace MothBot
             return result;
         }
         public Dictionary<ulong, Message> MessageReactions { get; set; } = new Dictionary<ulong, Message>();
+        public ulong LastPoll { get; set; } = 0;
     }
     public class User
     {
@@ -61,9 +63,9 @@ namespace MothBot
     }
     public class Confirmation
     {
-        public ulong GuildID { get; set; }
-        public ulong MessageID { get; set; }
-        public ulong ChannelID { get; set; }
+        public ulong GuildID { get; set; }      //The guild the confirmation is in
+        public ulong MessageID { get; set; }    //The message the confirmation was made in
+        public ulong ChannelID { get; set; }    //The channel the confirmation was made in
         public string Purpose { get; set; } = "Default";
         public ulong ULongArgument1 { get; set; }
         public ulong ULongArgument2 { get; set; }
@@ -74,6 +76,7 @@ namespace MothBot
         public ulong Daily { get; set; } = 0;
         public ulong Search { get; set; } = 0;
         public Dictionary<string, ulong> Item { get; set; } = new Dictionary<string, ulong>();
+        public ulong Poll { get; set; } = 0;
     }
     public class StorePage
     {
@@ -88,8 +91,71 @@ namespace MothBot
         public ulong Author { get; set; } = 0;
         public bool Disabled { get; set; } = false;
     }
+    public class ChessPiece
+    {
+        public bool IsWhite { get; set; }
+        //public pair
+    }
+    public class ChessMove
+    {
+        //public Matrix initialSquare { get; set; };
+    }
+    public class ChessPosition
+    {
+        public List<ChessMove> Moves { get; set; } = new List<ChessMove>();
+    }
     public class ConfirmationResponses
     {
+        public static async void confirmConfirmation(SocketCommandContext context, ulong userID)
+        {
+            var confirmation = ClassSetups.confirmations[userID];
+            ClassSetups.confirmations.Remove(userID);
+            var guild = context.Guild;
+            var channel = context.Channel;
+            var message = context.Message;
+            Func.disableButtons(message);
+            switch (confirmation.Purpose)
+            {
+                case "gift":
+                    GiftConfirm(guild, channel, userID, confirmation.ULongArgument1, confirmation.ULongArgument2);
+                    break;
+                case "buyItem":
+                    BuyConfirm(guild, channel, userID, confirmation.ItemArgument1, confirmation.ULongArgument1, confirmation.ULongArgument2);
+                    break;
+                case "muteUser":
+                    MuteConfirm(context, userID, confirmation.ULongArgument1);
+                    break;
+                default:
+                    await channel.SendMessageAsync("This should never appear. Ping Randy if it does pls, may the Moth be with you.");
+                    break;
+            }
+        }
+        public static async void cancelConfirmation(ulong userID, DiscordSocketClient _client)
+        {
+            var confirmation = ClassSetups.confirmations[userID];
+            ClassSetups.confirmations.Remove(userID);
+            var guild = _client.GetGuild(confirmation.GuildID);
+            var channel = (ISocketMessageChannel)guild.GetChannel(confirmation.ChannelID);
+            var message = (IUserMessage)channel.GetMessageAsync(confirmation.MessageID).Result;
+            Func.disableButtons(message);
+            switch (confirmation.Purpose)
+            {
+                case "gift":
+                    await channel.SendMessageAsync("Gifting cancelled!");
+                    break;
+                case "buyItem":
+                    await channel.SendMessageAsync("Item purchase cancelled!");
+                    break;
+                case "help":
+                    break;
+                case "muteUser":
+                    await channel.SendMessageAsync("Muting cancelled!");
+                    break;
+                default:
+                    await channel.SendMessageAsync("This should never appear. Ping Randy if it does pls, may the Moth be with you.");
+                    break;
+            }
+        }
         public static async void GiftConfirm(SocketGuild guild, ISocketMessageChannel channel, ulong userID, ulong recipientID, ulong mothAmount)
         {
             ClassSetups.usersDict[userID].MothAmount -= mothAmount;
@@ -183,61 +249,12 @@ namespace MothBot
             await user.RemoveRoleAsync(muteRole);
             await user.SendMessageAsync($"Your mute on {guild.Name} has run out.");
         }
-        public static async void cancelConfirmation(ulong userID, DiscordSocketClient _client)
-        {
-            var confirmation = ClassSetups.confirmations[userID];
-            ClassSetups.confirmations.Remove(userID);
-            var guild = _client.GetGuild(confirmation.GuildID);
-            var channel = (ISocketMessageChannel)guild.GetChannel(confirmation.ChannelID);
-            var message = (IUserMessage)channel.GetMessageAsync(confirmation.MessageID).Result;
-            Func.disableButtons(message);
-            switch (confirmation.Purpose)
-            {
-                case "gift":
-                    await channel.SendMessageAsync("Gifting cancelled!");
-                    break;
-                case "buyItem":
-                    await channel.SendMessageAsync("Item purchase cancelled!");
-                    break;
-                case "help":
-                    await channel.SendMessageAsync("Muting cancelled!");
-                    break;
-                case "muteUser":
-                    break;
-                default:
-                    await channel.SendMessageAsync("This should never appear. Ping Randy if it does pls, may the Moth be with you.");
-                    break;
-            }
-        }
-        public static async void confirmConfirmation(SocketCommandContext context, ulong userID)
-        {
-            var confirmation = ClassSetups.confirmations[userID];
-            ClassSetups.confirmations.Remove(userID);
-            var guild = context.Guild;
-            var channel = context.Channel;
-            var message = context.Message;
-            Func.disableButtons(message);
-            switch (confirmation.Purpose)
-            {
-                case "gift":
-                    GiftConfirm(guild, channel, userID, confirmation.ULongArgument1, confirmation.ULongArgument2);
-                    break;
-                case "buyItem":
-                    BuyConfirm(guild, channel, userID, confirmation.ItemArgument1, confirmation.ULongArgument1, confirmation.ULongArgument2);
-                    break;
-                case "muteUser":
-                    MuteConfirm(context, userID, confirmation.ULongArgument1);
-                    break;
-                default:
-                    await channel.SendMessageAsync("This should never appear. Ping Randy if it does pls, may the Moth be with you.");
-                    break;
-            }
-        }
     }
     public static class ClassSetups
     {
         public static Dictionary<string, ulong> emojisDict = new Dictionary<string, ulong>();
         public static Dictionary<string,Item> itemsDict = new Dictionary<string, Item>();
+        public static Dictionary<string, ChessPosition> chessDict = new Dictionary<string, ChessPosition>();
         public static List<Post> posts = new List<Post>();
         public static ulong lastReddit = 0;
         public static Dictionary<ulong, Confirmation> confirmations = new Dictionary<ulong, Confirmation>();
