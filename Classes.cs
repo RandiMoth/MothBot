@@ -299,7 +299,7 @@ namespace MothBot
         private static async void CreateBackupTimer()
         {
             Thread.Sleep(30);
-            var timer = new PeriodicTimer(TimeSpan.FromSeconds(21600));
+            var timer = new PeriodicTimer(TimeSpan.FromSeconds(10800));
             while (await timer.WaitForNextTickAsync())
             {
                 var time = DateTime.Now;

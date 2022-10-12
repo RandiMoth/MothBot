@@ -250,9 +250,12 @@ namespace MothBot
         }
         public async Task ReactionAdded(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
+            //Console.WriteLine(reaction.Emote.Name);
             if (channel.Id == 937374835577864202)
                 return;
             var emote = reaction.Emote;
+            if (channel.Id == 804436650045603900&&emote.Name=="grublove")
+                return;
             var guildID = ((IGuildChannel)channel.Value).Guild.Id;
             IUserMessage reactMessage;
             if (!message.HasValue)
