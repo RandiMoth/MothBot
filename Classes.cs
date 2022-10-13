@@ -269,12 +269,20 @@ namespace MothBot
             emojisDict = deserializer.Deserialize<Dictionary<string, ulong>>(new StringReader(File.ReadAllText("info/emoji_info.yaml")));
             usersDict = deserializer.Deserialize<Dictionary<ulong, User>>(new StringReader(File.ReadAllText("info/user_info.yaml")));
             storePagesDict = deserializer.Deserialize<Dictionary<ulong, StorePage>>(new StringReader(File.ReadAllText("info/store_info.yaml")));
-            var childref = new ThreadStart(UpdateDynamicInfoTimer);
-            Thread childThread = new Thread(childref);
-            childThread.Start();
-            var childref2 = new ThreadStart(CreateBackupTimer);
-            Thread childThread2 = new Thread(childref2);
-            childThread2.Start();
+            if (guildsDict == null || usersDict == null)
+            {
+                Console.WriteLine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
+                File.CreateText(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + "\\MOTHBOT DOWN.txt");
+            }
+            else {
+                var childref = new ThreadStart(UpdateDynamicInfoTimer);
+                Thread childThread = new Thread(childref);
+                childThread.Start();
+                var childref2 = new ThreadStart(CreateBackupTimer);
+                Thread childThread2 = new Thread(childref2);
+                childThread2.Start();
+            }
+            
         }
         private static async void UpdateDynamicInfoTimer()
         {
@@ -289,12 +297,20 @@ namespace MothBot
             var serializer = new SerializerBuilder().Build();
             var stringToWrite = serializer.Serialize(guildsDict);
             var stringToWrite2 = serializer.Serialize(usersDict);
-            var f = File.CreateText(folder + "guild_info.yaml");
+            var f = File.CreateText(folder + "guild_info_temp.yaml");
             f.WriteLine(stringToWrite);
             f.Close();
-            f = File.CreateText(folder + "user_info.yaml");
+            f = File.CreateText(folder + "user_info_temp.yaml");
             f.WriteLine(stringToWrite2);
             f.Close();
+            File.Delete(folder + "guild_info_old_old.yaml");
+            File.Move(folder + "guild_info_old.yaml", folder + "guild_info_old_old.yaml");
+            File.Move(folder + "guild_info.yaml", folder + "guild_info_old.yaml");
+            File.Move(folder + "guild_info_temp.yaml", folder + "guild_info.yaml");
+            File.Delete(folder + "user_info_old_old.yaml");
+            File.Move(folder + "user_info_old.yaml", folder + "user_info_old_old.yaml");
+            File.Move(folder + "user_info.yaml", folder + "user_info_old.yaml");
+            File.Move(folder + "user_info_temp.yaml", folder + "user_info.yaml");
         }
         private static async void CreateBackupTimer()
         {
