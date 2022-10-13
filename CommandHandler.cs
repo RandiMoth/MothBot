@@ -966,7 +966,7 @@ namespace MothBot
             var time = DateTime.Now;
             var folderName = $"info\\backup\\{time.Year}-{time.Month}-{time.Day}-{time.Hour}-{time.Minute}\\";
             Directory.CreateDirectory(folderName);
-            ClassSetups.writeDynamicInfo(folderName);
+            ClassSetups.CreateBackup(folderName);
             await Context.Channel.SendMessageAsync("Files overwritten.");
         }
         [Command("DMessage")]

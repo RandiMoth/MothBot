@@ -321,8 +321,20 @@ namespace MothBot
                 var time = DateTime.Now;
                 var folderName = $"info\\backup\\{time.Year}-{time.Month}-{time.Day}-{time.Hour}-{time.Minute}\\";
                 Directory.CreateDirectory(folderName);
-                writeDynamicInfo(folderName);
+                CreateBackup(folderName);
             }
+        }
+        public static void CreateBackup(string folder)
+        {
+            var serializer = new SerializerBuilder().Build();
+            var stringToWrite = serializer.Serialize(guildsDict);
+            var stringToWrite2 = serializer.Serialize(usersDict);
+            var f = File.CreateText(folder + "guild_info.yaml");
+            f.WriteLine(stringToWrite);
+            f.Close();
+            f = File.CreateText(folder + "user_info.yaml");
+            f.WriteLine(stringToWrite2);
+            f.Close();
         }
 
         public static void redditUpdate()
