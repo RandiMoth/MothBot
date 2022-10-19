@@ -287,12 +287,16 @@ namespace MothBot
         private static async void UpdateDynamicInfoTimer()
         {
             var timer = new PeriodicTimer(TimeSpan.FromSeconds(60));
+            int period = 2;
             while (await timer.WaitForNextTickAsync())
             {
-                writeDynamicInfo("info\\");
+                period = 3 - period;
+                var succrun = writeDynamicInfo("info\\", period);
+                if (!succrun)
+                    break;
             }
         }
-        public static void writeDynamicInfo(string folder)
+        public static bool writeDynamicInfo(string folder, int period)
         {
             var serializer = new SerializerBuilder().Build();
             var stringToWrite = serializer.Serialize(guildsDict);
@@ -303,14 +307,20 @@ namespace MothBot
             f = File.CreateText(folder + "user_info_temp.yaml");
             f.WriteLine(stringToWrite2);
             f.Close();
-            File.Delete(folder + "guild_info_old_old.yaml");
-            File.Move(folder + "guild_info_old.yaml", folder + "guild_info_old_old.yaml");
-            File.Move(folder + "guild_info.yaml", folder + "guild_info_old.yaml");
+            var deserializer = new DeserializerBuilder().Build();
+            var testData = deserializer.Deserialize<Dictionary<ulong, Guild>>(new StringReader(File.ReadAllText($"info/guild_info_{3-period}.yaml")));
+            if (testData == null)
+                return false;
+            File.Delete(folder + $"guild_info_{period}.yaml");
+            File.Move(folder + "guild_info.yaml", folder + $"guild_info_{period}.yaml");
             File.Move(folder + "guild_info_temp.yaml", folder + "guild_info.yaml");
-            File.Delete(folder + "user_info_old_old.yaml");
-            File.Move(folder + "user_info_old.yaml", folder + "user_info_old_old.yaml");
-            File.Move(folder + "user_info.yaml", folder + "user_info_old.yaml");
+            var testData2 = deserializer.Deserialize<Dictionary<ulong, User>>(new StringReader(File.ReadAllText($"info/user_info_{3-period}.yaml")));
+            if (testData2 == null)  
+                return false;
+            File.Delete(folder + $"user_info_{period}.yaml");
+            File.Move(folder + "user_info.yaml", folder + $"user_info_{period}.yaml");
             File.Move(folder + "user_info_temp.yaml", folder + "user_info.yaml");
+            return true;
         }
         private static async void CreateBackupTimer()
         {

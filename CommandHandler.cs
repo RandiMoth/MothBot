@@ -24,11 +24,9 @@ namespace MothBot
         {
             foreach (var x in ClassSetups.emojisDict)
             {
-                str = str.Replace($":{x.Key}:", $"<:{x.Key}:{x.Value}>", comparisonType: StringComparison.OrdinalIgnoreCase);
-                str = str.Replace($"\\<:{x.Key}:{x.Value}>", $"\\:{x.Key}:", comparisonType: StringComparison.OrdinalIgnoreCase);
-                str = Regex.Replace(str,$"<<:{x.Key}:{x.Value}>([0-9]*)>", $"<:{x.Value}:$1>", RegexOptions.IgnoreCase);
+                str = Regex.Replace(str,$"(?i)(?<![\\<]):{x.Key}:", $"<$&{x.Value}>");
             }
-            return str;
+            return str; 
         }
         public static SocketRole? getRole(string s, SocketGuild g)
         {
@@ -956,8 +954,11 @@ namespace MothBot
         [Summary("how did you learn of this?")]
         private async Task overwriteAsync([Remainder()] string s = "")
         {
-            ClassSetups.writeDynamicInfo("info\\");
-            await Context.Channel.SendMessageAsync("Files overwritten.");
+            var succrun = ClassSetups.writeDynamicInfo("info\\", 1);
+            if (!succrun)
+                await Context.Channel.SendMessageAsync("Files failed to overwrite.");
+            else
+                await Context.Channel.SendMessageAsync("Files overwritten.");
         }
         [Command("forceBackup")]
         [Summary("how did you learn of this?")]
