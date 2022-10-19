@@ -24,7 +24,7 @@ namespace MothBot
         {
             foreach (var x in ClassSetups.emojisDict)
             {
-                str = Regex.Replace(str,$"(?i)(?<![\\<]):{x.Key}:", $"<$&{x.Value}>");
+                str = Regex.Replace(str,$@"(?i)(?<![\\])(?(?<=<):{x.Key}:(?!\d*>)|:{x.Key}:)", $"<$&{x.Value}>");
             }
             return str; 
         }
