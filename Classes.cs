@@ -293,7 +293,7 @@ namespace MothBot
                 period = 3 - period;
                 var succrun = writeDynamicInfo("info\\", period);
                 if (!succrun)
-                    break;
+                    period = 3 - period;
             }
         }
         public static bool writeDynamicInfo(string folder, int period)

@@ -24,7 +24,7 @@ namespace MothBot
         {
             foreach (var x in ClassSetups.emojisDict)
             {
-                str = Regex.Replace(str,$@"(?i)(?<![\\])(?(?<=<):{x.Key}:(?!\d*>)|:{x.Key}:)", $"<$&{x.Value}>");
+                str = Regex.Replace(str,$@"(?i)(?<!\\)(?(?<=<):{x.Key}:(?!\d*>)|:{x.Key}:)", $"<$&{x.Value}>");
             }
             return str; 
         }
@@ -255,6 +255,17 @@ namespace MothBot
                     return new Emoji("🔟");
             }
             return null;
+        }
+        public static ulong GCD(ulong a, ulong b)
+        {
+            if (b == 0)
+                return a;
+            else
+                return GCD(b, a % b);
+        }
+        public static ulong LCM(ulong a, ulong b)
+        {
+            return a * b / GCD(a, b);
         }
     }
     public class HelpHandler : ModuleBase<SocketCommandContext>
@@ -905,9 +916,9 @@ namespace MothBot
         [Summary("hi den")]
         private async Task ai_will_doAsync([Remainder()] string s = "")
         {
-            var ai_list = new List<double>();
+            var ai_list = new List<long>();
             foreach (var c in s.Split())
-                ai_list.Add(Convert.ToDouble(c));
+                ai_list.Add(Convert.ToInt64(Convert.ToDouble(c)*1000));
             var chance = ai_list[0];
             if (chance <= 0)
             {
@@ -917,38 +928,59 @@ namespace MothBot
             ai_list.Remove(chance);
             ai_list.RemoveAll(t => t <= 0);
             ai_list.Sort();
+            var listGcd = (ulong)chance;
+            foreach (var x in ai_list)
+                listGcd = Func.GCD(listGcd, (ulong)x);
+            chance /= (long)listGcd;
+            for (int i = 0; i < ai_list.Count; i++)
+                ai_list[i] /= (long)listGcd;
             Console.WriteLine($"Calculating chance of {chance}, with other focuses being {string.Join(' ',ai_list)}");
-            int power = ai_list.Count;
+            ulong power = (ulong)ai_list.Count;
             if (power == 0)
             {
                 await Context.Channel.SendMessageAsync("This focus will always be picked.");
                 return;
             }
-            double denominator = ai_list.Aggregate((a, x) => a * x);
-            double lowbound;
-            double highbound = 0;
+            ulong denominator = (ulong)ai_list.Aggregate((a, x) => a * x);
+            ulong powTot = 1;
+            for (ulong i = 1; i <= power; i++)
+                powTot = Func.LCM(powTot, i+1);
+            ulong newDem = denominator * powTot;
+            ulong newDemFac = 1;
+            ulong lowbound;
+            ulong highbound = 0;
             double result = 0;
+            ulong numerator = 0;
             for (int i = 0; i<ai_list.Count; i++)
             {
                 lowbound = highbound;
-                highbound = Math.Min(ai_list[i],chance);
+                highbound = (ulong)Math.Min(ai_list[i],chance);
                 Console.WriteLine($"Calculating integral from {lowbound} to {highbound}");
                 result += (Math.Pow(highbound, power + 1) - Math.Pow(lowbound, power + 1)) / (denominator * (power + 1));
-                Console.WriteLine($"Result becomes {result}");
-                if (highbound == chance)
+                numerator += newDemFac * powTot / (power + 1) * (ulong)(Math.Pow(highbound, power + 1) - Math.Pow(lowbound, power + 1));
+                Console.WriteLine($"Result becomes {result}, numerator becomes {numerator}");
+                if (highbound == (ulong)chance)
                     break;
                 denominator /= highbound;
+                newDemFac *= highbound;
                 power--;
                 if (i == ai_list.Count-1)
                 {
                     Console.WriteLine($"Calculating integral from {highbound} to {chance}");
+                    numerator += newDemFac * powTot / (power + 1) * (ulong)(Math.Pow(highbound, power + 1) - Math.Pow(lowbound, power + 1));
                     result += chance;
                     result -= highbound;
-                    Console.WriteLine($"Result becomes {result}");
+                    Console.WriteLine($"Result becomes {result}, numerator becomes {numerator}");
                 }
             }
             result /= chance;
-            await Context.Channel.SendMessageAsync($"The chance of the focus of being picked is approximately {Math.Round(result*100,2)}%.");
+            newDem *= (ulong)chance;
+            Console.WriteLine($"Before shortening, num - {numerator}, dem - {newDem}");
+            ulong gcd = Func.GCD(newDem, numerator);
+            newDem /= gcd;
+            numerator /= gcd;
+            await Context.Channel.SendMessageAsync($"The chance of the focus being picked is approximately {Math.Round(result * 100, 2)}% or exactly {numerator}/{newDem}.");
+            Console.WriteLine($"The chance of the focus being picked is approximately {Math.Round(result * 100, 2)}% or exactly {numerator}/{newDem}.\n");
         }
         [Command("forceOverwrite")]
         [Summary("how did you learn of this?")]
