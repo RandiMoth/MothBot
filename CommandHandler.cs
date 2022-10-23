@@ -909,7 +909,7 @@ namespace MothBot
         }
     }
     [Name("Developer commands")]
-    [RequireOwner(ErrorMessage = "you can't do this unless you're Randi lol")]
+    [RequireOwner()]
     public class DeveloperTest : ModuleBase<SocketCommandContext>
     {
         [Command("ai_will_do")]
