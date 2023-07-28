@@ -8,6 +8,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Threading;
+using YamlDotNet.Core;
 
 namespace MothBot
 {
@@ -82,17 +84,59 @@ namespace MothBot
             _client.SelectMenuExecuted += HandleSelectAsync;
             _client.ReactionAdded += ReactionAdded;
             _client.ReactionRemoved += ReactionRemoved;
+            _client.GuildMemberUpdated += GuildMemberUpdated;
             _client.Ready += async () =>
             {
                 Console.WriteLine("Bot is connected!");
-                await _client.SetGameAsync("moth identifier 9000");
+                await _client.SetGameAsync("Creepy Castle");
                 var guild = _client.GetGuild(608912123317321738);
                 var channel = (ISocketMessageChannel)guild.GetChannel(935420527051419688);
                 await channel.SendMessageAsync("MothBot is now online.");
+                Thread childThread = new Thread(() => CheckTimers());
+                childThread.Start();
                 return;
             };
             // Block this task until the program is closed.
             await Task.Delay(-1);
+        }
+
+        private async Task CheckTimers()
+        {
+            var timer = new PeriodicTimer(TimeSpan.FromSeconds(60));
+            while (await timer.WaitForNextTickAsync())
+            {
+                //Console.WriteLine("Minute check");
+                ulong thisTime = Convert.ToUInt64(((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds());
+                foreach (var guildEntry in ClassSetups.guildsDict)
+                {
+                    var guild = _client.GetGuild(guildEntry.Key);
+                    for (var i = 0; i < guildEntry.Value.Timers.Count; i++)
+                    {
+                        var timerCheck = guildEntry.Value.Timers[i];
+                        if (timerCheck.Active)
+                        {
+                            continue;
+                        }
+                        int offset = (int)(timerCheck.TimeToFire - thisTime);
+                        if (timerCheck.Paused)
+                        {
+                            if (offset < -604800)
+                                guildEntry.Value.Timers.RemoveAt(i);
+                            continue;
+                        }
+                        //Console.WriteLine($"Time to fire: {timerCheck.TimeToFire}; This time: {thisTime}; Offset: {offset}");
+                        if (offset < 60)
+                        {
+                            bool late = offset < -60;
+                            if (offset < 0)
+                                offset = 0;
+                            guildEntry.Value.Timers[i].Active = true;
+                            Thread childThread = new Thread(() => Func.MakeReminderAsync(timerCheck, guild, late, offset));
+                            childThread.Start();
+                        }
+                    }
+                }
+            }
         }
 
         private async Task MessageUpdated(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
@@ -411,6 +455,11 @@ namespace MothBot
             if (ClassSetups.guildsDict[guildID].MessageReactions.Any(x => x.Value.Id == message.Id))
                 ClassSetups.guildsDict[guildID].MessageReactions.First(x => x.Value.Id == message.Id).Value.Disabled = true;
         }*/
+        public async Task GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> userCache, SocketGuildUser user)
+        {
+            if (user.Id == 134307305805185024 && user.Roles.Contains(user.Guild.GetRole(916764069233557544)))
+                await user.RemoveRoleAsync(916764069233557544);
+        }
     }
     public class LoggingService
     {

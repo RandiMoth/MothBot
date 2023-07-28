@@ -70,7 +70,7 @@ namespace MothBot
         {
             var lastTime = ClassSetups.usersDict[Context.User.Id].LastTimes.Daily / 86400;
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            Boolean claimedReward = false;
+            bool claimedReward = false;
             if (thisTime / 86400 > lastTime)
             {
                 ClassSetups.usersDict[Context.User.Id].MothAmount += 1000;
@@ -280,8 +280,8 @@ namespace MothBot
             string desc = "";
             string title = "";
             Random rand = new Random(DateTime.Now.ToString().GetHashCode());
-            int rv = 1 - rand.Next(0, 2);
-            if (rv == 0)
+            int rv = rand.Next(0, 100);
+            if (rv <= 50)
             {
                 ClassSetups.usersDict[Context.User.Id].MothAmount += mothAmount;
                 title += $"You've won **{mothAmount}** moth";

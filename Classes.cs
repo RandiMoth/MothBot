@@ -6,7 +6,6 @@ using Reddit.Controllers;
 using Reddit.Inputs;
 using System;
 using System.Collections.Generic;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -25,11 +24,11 @@ namespace MothBot
     }
     public class Item
     {
-        public string Id { get; set; } = "ID ERROR: Ping Randy if you see this, may Moth be with you.";
-        public string Name { get; set; } = "NAME ERROR: Ping Randy if you see this, may Moth be with you.";
+        public string Id { get; set; } = "ID ERROR: Ping Randi if you see this, may Moth be with you.";
+        public string Name { get; set; } = "NAME ERROR: Ping Randi if you see this, may Moth be with you.";
         public Price Price { get; set; } = new Price();
-        public string ShortDesc { get; set; } = "SHORTDESC ERROR: Ping Randy if you see this, may Moth be with you.";
-        public string LongDesc { get; set; } = "LONGDESC ERROR: Ping Randy if you see this, may Moth be with you.";
+        public string ShortDesc { get; set; } = "SHORTDESC ERROR: Ping Randi if you see this, may Moth be with you.";
+        public string LongDesc { get; set; } = "LONGDESC ERROR: Ping Randi if you see this, may Moth be with you.";
         public ulong Cooldown { get; set; } = 0;
         public ulong Max { get; set; } = 0;
     }
@@ -44,6 +43,7 @@ namespace MothBot
         public ulong MuteRole { get; set; } = 0;
         public ulong Taxes { get; set; } = 0;
         public ulong ReactionChannel { get; set; } = 0;
+        public ulong PollChannel { get; set; } = 0;
         public List<string> ReactionEmoji { get; set; } = new List<string>();
         public List<IEmote> ConvertedEmoji()
         {
@@ -54,11 +54,25 @@ namespace MothBot
         }
         public Dictionary<ulong, Message> MessageReactions { get; set; } = new Dictionary<ulong, Message>();
         public ulong LastPoll { get; set; } = 0;
+        public List<Timer> Timers { get; set; } = new List<Timer>();
+    }
+    public class Timer
+    {
+        public string Name { get; set; } = string.Empty;
+        public ulong Channel { get; set; } = 0;
+        public ulong TimeToFire { get; set; } = 0;
+        public string Text { get; set; } = string.Empty;
+        public ulong User { get; set; } = 0;
+        public bool Active { get; set; } = false;
+        public bool Paused { get; set; } = false;
+        public int RemainingTime { get; set; } = 0;
+        public int OriginalDuration { get; set; } = 0;
     }
     public class User
     {
         public ulong MothAmount { get; set; } = 0;
         public LastTimes LastTimes { get; set; } = new LastTimes();
+
         public Dictionary<string, ulong> Items = new Dictionary<string, ulong>();
     }
     public class Confirmation
@@ -90,19 +104,6 @@ namespace MothBot
         public ulong Channel { get; set; } = 0;
         public ulong Author { get; set; } = 0;
         public bool Disabled { get; set; } = false;
-    }
-    public class ChessPiece
-    {
-        public bool IsWhite { get; set; }
-        //public pair
-    }
-    public class ChessMove
-    {
-        //public Matrix initialSquare { get; set; };
-    }
-    public class ChessPosition
-    {
-        public List<ChessMove> Moves { get; set; } = new List<ChessMove>();
     }
     public class ConfirmationResponses
     {
@@ -254,7 +255,6 @@ namespace MothBot
     {
         public static Dictionary<string, ulong> emojisDict = new Dictionary<string, ulong>();
         public static Dictionary<string,Item> itemsDict = new Dictionary<string, Item>();
-        public static Dictionary<string, ChessPosition> chessDict = new Dictionary<string, ChessPosition>();
         public static List<Post> posts = new List<Post>();
         public static ulong lastReddit = 0;
         public static Dictionary<ulong, Confirmation> confirmations = new Dictionary<ulong, Confirmation>();

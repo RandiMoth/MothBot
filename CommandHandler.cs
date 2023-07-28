@@ -143,6 +143,47 @@ namespace MothBot
             if (!ClassSetups.guildsDict.ContainsKey(guildID))
                 ClassSetups.guildsDict.Add(guildID, new Guild());
         }
+        public static int? HumanTimeToSeconds(string rawTime)
+        {
+            rawTime = Regex.Replace(rawTime, @"[^\w\s:]+", "");
+            int seconds = 0;
+            if (rawTime.Contains(':'))
+            {
+                var time = rawTime.Split(':',options: StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+                if (time.Length > 4)
+                return null;
+                List<int> times = new List<int>() { 1, 60, 3600, 86400 };
+                for (int i = 0; i<time.Length; i++)
+                {
+                    seconds += Convert.ToInt32(time[time.Length-1-i]) * times[i];
+                }
+                return seconds;
+            }
+            var timeSplit = rawTime.Split(' ',options: StringSplitOptions.RemoveEmptyEntries);
+            foreach (string s in timeSplit)
+            {
+                Console.WriteLine(s);
+                int number = Convert.ToInt32(s.Remove(s.Length - 1));
+                switch (s.Last())
+                {
+                    case 's':
+                        seconds += number;
+                        break;
+                    case 'm':
+                        seconds += number * 60;
+                        break;
+                    case 'h':
+                        seconds += number * 3600;
+                        break;
+                    case 'd':
+                        seconds += number * 86400;
+                        break;
+                    default:
+                        return null;
+                }
+            }
+            return seconds;
+        }
         public static DateTimeOffset DiscordIDToTimestamp(ulong ID)
         {
             long time = (long)(ID >> 22) + 1420070400000;
@@ -266,6 +307,26 @@ namespace MothBot
         public static ulong LCM(ulong a, ulong b)
         {
             return a * b / GCD(a, b);
+        }
+        public static async void MakeReminderAsync(Timer timer, SocketGuild guild, bool late = false, int delay = 0)
+        {
+            var channel = (ISocketMessageChannel)guild.GetChannel(timer.Channel);
+            var msg = $"<@{timer.User}>: here is your reminder.";
+            if (late)
+            {
+                var currentTime = Convert.ToUInt64(((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds());
+                msg += $" Due to the bot being offline, the end of the timer has been delayed by {Func.convertSeconds(currentTime-timer.TimeToFire)}.";
+            }
+            Thread.Sleep(delay * 1000);
+            if (!ClassSetups.guildsDict[guild.Id].Timers.Any(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase) && !tt.Paused))
+                return;
+            var index = ClassSetups.guildsDict[guild.Id].Timers.FindIndex(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase));
+            ClassSetups.guildsDict[guild.Id].Timers.RemoveAt(index);
+            var eb = new EmbedBuilder();
+            eb.WithDescription(timer.Text);
+            eb.WithColor(51, 127, 213);
+            await channel.SendMessageAsync(msg,false,eb.Build());
+            return;
         }
     }
     public class HelpHandler : ModuleBase<SocketCommandContext>
@@ -475,55 +536,57 @@ namespace MothBot
                 eb.WithDescription("Please enter what to say with `m!say <text>`.");
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
+                return;
             }
-            else
+            if (chanName.StartsWith("<#") && chanName.EndsWith(">"))
+                chanName = chanName.Substring(2, chanName.Length - 3);
+            ISocketMessageChannel chan = Context.Channel;
+            try
             {
-                if (chanName.StartsWith("<#") && chanName.EndsWith(">"))
-                    chanName = chanName.Substring(2, chanName.Length - 3);
-                ISocketMessageChannel chan = Context.Channel;
-                try
+                chan = (ISocketMessageChannel)Context.Guild.GetChannel(Convert.ToUInt64(chanName));
+                if (chan == null)
                 {
-                    chan = (ISocketMessageChannel)Context.Guild.GetChannel(Convert.ToUInt64(chanName));
+                    chan = (ISocketMessageChannel)Context.Client.GetGuild(608912123317321738).GetChannel(Convert.ToUInt64(chanName));
                     if (chan == null)
                     {
-                        echo = chanName + " " + echo;
-                        chan = Context.Channel;
+                        chan = (ISocketMessageChannel)Context.Client.GetGuild(798817032367505419).GetChannel(Convert.ToUInt64(chanName));
+                        if (chan == null)
+                        {
+                            echo = chanName + " " + echo;
+                            chan = Context.Channel;
+                        }
                     }
-                }
-                catch (FormatException)
-                {
-                    echo = chanName + " " + echo;
-                    chan = Context.Channel;
-                }
-                if (echo != "")
-                {
-                    var user = (IGuildUser)Context.User;
-                    if (user.GetPermissions((IGuildChannel)chan).SendMessages)
-                    {
-                        echo = Func.ConvertEmojis(echo);
-                        await chan.SendMessageAsync(echo, allowedMentions: AllowedMentions.None);
-                    }
-                    else
-                    {
-                        eb.WithDescription("You can only use the bot to send messages in channels you can send messages in yourself.");
-                        eb.WithColor(224, 33, 33);
-                        await Context.Channel.SendMessageAsync("", false, eb.Build());
-                    }
-                }
-                else
-                {
-                    eb.WithDescription("Please enter a message to send in the specified channel.");
-                    eb.WithColor(224, 33, 33);
-                    await Context.Channel.SendMessageAsync("", false, eb.Build());
                 }
             }
+            catch (FormatException)
+            {
+                echo = chanName + " " + echo;
+                chan = Context.Channel;
+            }
+            if (echo != "")
+            {
+                var user = (IGuildUser)Context.User;
+                if (user.GetPermissions((IGuildChannel)chan).SendMessages)
+                {
+                    echo = Func.ConvertEmojis(echo);
+                    await chan.SendMessageAsync(echo, allowedMentions: AllowedMentions.None);
+                    return;
+                }
+                eb.WithDescription("You can only use the bot to send messages in channels you can send messages in yourself.");
+                eb.WithColor(224, 33, 33);
+                await Context.Channel.SendMessageAsync("", false, eb.Build());
+                return;
+            }
+            eb.WithDescription("Please enter a message to send in the specified channel.");
+            eb.WithColor(224, 33, 33);
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("react")]
         [Summary("Reacts to a message.\n\nUsage: `m!react <message link> <emoji>`")]
         public async Task ReactAsync([Summary("Channel")] string messageLink = "", [Remainder][Summary("The emoji to react with")] string emojiName = "")
         {
             var eb = new EmbedBuilder();
-            if (messageLink == ""|| emojiName == "")
+            if (messageLink == "" || emojiName == "")
             {
                 eb.WithDescription("Please specify the message and the reaction with `m!react <message link> <emoji>`.");
                 eb.WithColor(224, 33, 33);
@@ -556,8 +619,8 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            var messageArray = messageLink.Split("/",StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
-            if (Convert.ToUInt64(messageArray[3])!=Context.Guild.Id)
+            var messageArray = messageLink.Split("/", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (Convert.ToUInt64(messageArray[3]) != Context.Guild.Id)
             {
                 eb.WithDescription("The message has to be in the same server!");
                 eb.WithColor(224, 33, 33);
@@ -625,7 +688,7 @@ namespace MothBot
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("howstupid")]
-        [Alias("stupid","howdumb","dumb")]
+        [Alias("stupid", "howdumb", "dumb")]
         [Summary("Randomly rates how stupid a user is.\n\nUsage: `m!howstupid <User>`")]
         public async Task StupidAsync([Remainder][Summary("The user")] SocketGuildUser? user = null)
         {
@@ -665,7 +728,7 @@ namespace MothBot
         public async Task NicknameAsync([Remainder][Summary("New nickname")] string nick = "")
         {
             var eb = new EmbedBuilder();
-            nick = nick.Replace("­","").Trim();
+            nick = nick.Replace("­", "").Trim();
             if (nick == "")
             {
                 eb.WithDescription("Please enter a nickname to change to with `m!nickname <bot name>`.");
@@ -673,7 +736,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            if (nick.Length>32)
+            if (nick.Length > 32)
             {
                 eb.WithDescription("This is too long to be a nickname!");
                 eb.WithColor(224, 33, 33);
@@ -684,7 +747,7 @@ namespace MothBot
             await user.ModifyAsync(x => { x.Nickname = nick; });
             eb.WithDescription("Nickname change successful!");
             eb.WithColor(72, 139, 48);
-            await Context.Channel.SendMessageAsync("",embed:eb.Build());
+            await Context.Channel.SendMessageAsync("", embed: eb.Build());
         }
         [Command("colour")]
         [Summary("Changes the colour of a role you have been assigned to a hexcode or resets it to being colourless.\n\nUsage: `m!colour <role> FFFF00`, `m!colour <role> reset`, `m!colour #00FF00`")]
@@ -692,7 +755,7 @@ namespace MothBot
         public async Task ColourAsync([Summary("Role")] string roleString, [Summary("Colour")] string hexCode = "")
         {
             var eb = new EmbedBuilder();
-            if (hexCode=="")
+            if (hexCode == "")
             {
                 await ColourNoRoleAsync(roleString, Context);
                 return;
@@ -728,7 +791,7 @@ namespace MothBot
                 return;
             }
             var c = new Color(colour[0], colour[1], colour[2]);
-            await role.ModifyAsync(x => { x.Color = c; } );
+            await role.ModifyAsync(x => { x.Color = c; });
             eb.WithDescription($"The colour of <@&{role.Id}> has been changed!");
             if (c == new Color(0, 0, 0))
                 eb.WithDescription($"The colour of <@&{role.Id}> has been reset!");
@@ -742,7 +805,7 @@ namespace MothBot
                 hexCode = "#000000";
             var roleList = ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[Context.User.Id];
             var eb = new EmbedBuilder();
-            if (roleList.Count==0)
+            if (roleList.Count == 0)
             {
                 eb.WithDescription("You don't have any roles assigned!");
                 eb.WithColor(224, 33, 33);
@@ -775,7 +838,7 @@ namespace MothBot
             var c = new Color(colour[0], colour[1], colour[2]);
             await role.ModifyAsync(x => { x.Color = c; });
             eb.WithDescription($"The colour of <@&{role.Id}> has been changed!");
-            if (c == new Color(0,0,0))
+            if (c == new Color(0, 0, 0))
                 eb.WithDescription($"The colour of <@&{role.Id}> has been reset!");
             else
                 eb.WithColor(c);
@@ -842,7 +905,7 @@ namespace MothBot
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("poll")]
-        [Summary("Creates a poll with the specified options.\n\nUsage: `m!date <ID>")]
+        [Summary("Creates a poll with the specified options, with up to 10 allowed, separated by quotes. \\\\\" allows escaping a quotation mark. \n\nUsage: `m!poll title \"option 1\" \"option 2\" <...>`")]
         private async Task pollAsync([Remainder] string pollOptionsRaw = "")
         {
             var pollOptions = Func.parseQuotes(pollOptionsRaw);
@@ -851,7 +914,7 @@ namespace MothBot
                 Console.WriteLine(x);
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
-            if (pollOptions.Count < 3||pollOptions.Count>11)
+            if (pollOptions.Count < 3 || pollOptions.Count > 11)
             {
                 eb.WithDescription("Make sure that the poll includes a title and between 2 and 10 options, inclusionary.");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
@@ -885,7 +948,13 @@ namespace MothBot
             eb.WithTitle(Func.ConvertEmojis(pollOptions[0]));
             eb.WithDescription(desc);
             eb.WithFooter($"This poll was created by {Context.User.Username}#{Context.User.Discriminator}");
-            var channel = (ISocketMessageChannel)Context.Guild.GetChannel(825980405239906374);
+            Attachment? attach = null;
+            if (Context.Message.Attachments.Count > 0)
+            {
+                attach = Context.Message.Attachments.First();
+                eb.WithImageUrl(attach.Url);
+            }
+            var channel = (ISocketMessageChannel)Context.Guild.GetChannel(ClassSetups.guildsDict[Context.Guild.Id].PollChannel);
             var message = await channel.SendMessageAsync("", false, eb.Build());
             Thread childThread = new Thread(() => PollReaction(message, pollOptions.Count));
             childThread.Start();
@@ -904,8 +973,234 @@ namespace MothBot
                 var emote = Func.getKeycapEmoji(i);
                 await message.AddReactionAsync(emote);
             }
-            var thread = await channel.CreateThreadAsync(message.Embeds.First().Title, autoArchiveDuration: ThreadArchiveDuration.OneDay, message: message);
+            var threadName = message.Embeds.First().Title;
+            if (threadName.Length > 99)
+                threadName = Regex.Match(threadName, @"^.{0,96}\w\b") + "...";
+            var thread = await channel.CreateThreadAsync(threadName, autoArchiveDuration: ThreadArchiveDuration.OneDay, message: message);
             await thread.SendMessageAsync("Discuss this poll in the thread, such as why you've picked an option. If the poll has an \"Other\" option, you can say what you've picked that doesn't fall in the options.");
+        }
+        [Command("randomselect")]
+        [Summary("Selects a random option with uniform distribution, separated by quotes. \\\\\" allows escaping a quotation mark. \n\nUsage: `m!randomselect \"option 1\" \"option 2\" <...>`")]
+        private async Task randomSelectAsync([Remainder] string optionsRaw = "")
+        {
+            var options = Func.parseQuotes(optionsRaw);
+            if (options.Count < 2)
+            {
+                var eb = new EmbedBuilder();
+                eb.WithColor(244, 178, 23);
+                eb.WithDescription("Make sure that the random selection has at least 2 choices it can select");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            Random rand = new Random(DateTime.Now.ToString().GetHashCode());
+            int option = rand.Next(0, options.Count);
+            await Context.Channel.SendMessageAsync(options[option]);
+        }
+    }
+    [Name("Timer commands")]
+    [Summary("Commands related to dealing with timers")]
+    public class TimerCommands : ModuleBase<SocketCommandContext>
+    {
+        [Command("timerstart")]
+        [Alias("starttimer")]
+        [Summary("Starts a timer of the specified length, arguments separate by quotes. Upon ending, the text will be sent in the channel where the command was executed. \\\\\" allows escaping a quotation mark. Optionally allows specifying a short name as separate from the text. \n\nUsage: `m!timerstart 1h 2m 3s \"Timer's name\" \"Text to fire\"`, `m!timerstart 01:02:03 \"Text to fire and timer's name\"`.")]
+        private async Task timerStartAsync([Remainder] string inputRaw = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var inputs = Func.parseQuotes(inputRaw);
+            if (inputs.Count < 2 || inputs.Count > 3)
+            {
+                eb.WithDescription("Invalid amount of arguments. Make sure that the command follows the usage examples: `m!timerstart 1h 2m 3s \"Timer's name\" \"Text to fire\"`, `m!timerstart 01:02:03 \"Text to fire and timer's name\"`");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            int? seconds = Func.HumanTimeToSeconds(inputs[0]);
+            if (seconds == null)
+            {
+                eb.WithDescription("Failed to convert the timer to seconds. Make sure that the time is in a supported format such as `01:02:03` or `1d 2h 3m 4s`.");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            if (ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(timer => timer.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase)))
+            {
+                eb.WithDescription("A timer with this name already exists in this server.");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription($"The timer \"{inputs[1]}\" is set to fire <t:{thisTime + (ulong)seconds}:R>.");
+            Timer timer = new Timer() { Channel = Context.Channel.Id, Name = inputs[1], Text = inputs[inputs.Count - 1], TimeToFire = thisTime + (ulong)seconds, User = Context.User.Id, OriginalDuration = (int)seconds, Active = seconds < 60 };
+            ClassSetups.guildsDict[Context.Guild.Id].Timers.Add(timer);
+            await Context.Channel.SendMessageAsync("", embed: eb.Build());
+            if (timer.Active)
+            {
+                Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: (int)seconds));
+                childThread.Start();
+            }
+        }
+        [Command("timercheck")]
+        [Alias("checktimer", "check")]
+        [Summary("Checks the status of the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timercheck Timer's name`")]
+        private async Task timerCheckAsync([Remainder] string timerName = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var timers = ClassSetups.guildsDict[Context.Guild.Id].Timers.Where(timer => timer.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            if (timers.Count() == 0)
+            {
+                eb.WithDescription("Couldn't find the timer with the specified name");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var timer = timers.First();
+            eb.WithColor(51, 127, 213);
+            eb.WithTitle(timer.Name);
+            string txt = timer.Text + $"\nTimer for {Func.convertSeconds((ulong)timer.OriginalDuration)}.\n\n";
+            if (timer.Paused)
+            {
+                txt += $"*This timer is currently paused*. If unpaused right now, it would end in {Func.convertSeconds((ulong)timer.RemainingTime)}.";
+            }
+            else
+            {
+                txt += $"This timer is currently active and will end <t:{timer.TimeToFire}:R>.";
+            }
+            eb.WithDescription(txt);
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        [Command("timerpause")]
+        [Alias("pausetimer", "pause")]
+        [Summary("Pauses the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerpause Timer's name`")]
+        private async Task timerPauseAsync([Remainder] string timerName = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            if (index == -1)
+            {
+                eb.WithDescription("Couldn't find the timer with the specified name");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            if (timer.Paused)
+            {
+                eb.WithDescription("This timer is already paused!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            if (timer.User != Context.User.Id)
+            {
+                eb.WithDescription("You can't pause other people's timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Paused = true;
+            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime = (int)(timer.TimeToFire - thisTime);
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription($"The timer \"{timer.Name}\" has been paused. If unpaused, it will end in {Func.convertSeconds(timer.TimeToFire - thisTime)}.");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        [Command("timerunpause")]
+        [Alias("unpausetimer", "unpause")]
+        [Summary("Unpauses the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerunpause Timer's name`")]
+        private async Task timerUnpauseAsync([Remainder] string timerName = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            if (index == -1)
+            {
+                eb.WithDescription("Couldn't find the timer with the specified name");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            if (!timer.Paused)
+            {
+                eb.WithDescription("This timer is already unpaused!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            if (timer.User != Context.User.Id)
+            {
+                eb.WithDescription("You can't unpause other people's timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Paused = false;
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire = thisTime + (ulong)timer.RemainingTime;
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription($"The timer \"{timer.Name}\" has been unpaused and scheduled to fire <t:{thisTime + (ulong)timer.RemainingTime}:R>.");
+            if (timer.RemainingTime < 60)
+            {
+                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = true;
+                Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: timer.RemainingTime));
+                childThread.Start();
+            }
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        [Command("timerdelete")]
+        [Alias("deletetimer", "timercancel", "canceltimer")]
+        [Summary("Cancels the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerdelete Timer's name`")]
+        private async Task timerDeleteAsync([Remainder] string timerName = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            if (index == -1)
+            {
+                eb.WithDescription("Couldn't find the timer with the specified name");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            if (timer.User != Context.User.Id)
+            {
+                eb.WithDescription("You can't delete other people's timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ClassSetups.guildsDict[Context.Guild.Id].Timers.RemoveAt(index);
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription($"The timer \"{timer.Name}\" has been deleted.");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        [Command("timerlist")]
+        [Alias("listtimers")]
+        [Summary("Lists the timer of a user. If the user isn't specified, defaults to the person who used the command. \n\nUsage: `m!timerlist @username`")]
+        private async Task timerListAsync([Remainder] SocketUser? user = null)
+        {
+            var eb = new EmbedBuilder();
+            if (user == null)
+                user = Context.User;
+            var timers = ClassSetups.guildsDict[Context.Guild.Id].Timers.Where(t => t.User == user.Id);
+            eb.WithColor(51, 127, 213);
+            if (timers.Count() == 0)
+                eb.WithDescription("No timers have been found");
+            else
+            {
+                string txt = "";
+                foreach (var timer in timers)
+                {
+                    txt += $"**{timer.Name}**";
+                    if (timer.Text != timer.Name)
+                        txt += $"\n{timer.Text}";
+                    if (timer.Paused)
+                        txt += "\nCurrently paused";
+                    else
+                        txt += "\nCurrently active";
+                    txt += "\n\n";
+                }
+                txt = txt.TrimEnd();
+                eb.WithDescription(txt);
+            }
+            eb.WithTitle($"Timers for {user.Username}");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
     }
     [Name("Developer commands")]
@@ -967,7 +1262,7 @@ namespace MothBot
                 if (i == ai_list.Count-1)
                 {
                     Console.WriteLine($"Calculating integral from {highbound} to {chance}");
-                    numerator += newDemFac * powTot / (power + 1) * (ulong)(Math.Pow(highbound, power + 1) - Math.Pow(lowbound, power + 1));
+                    numerator += newDemFac * powTot / (power + 1) * (ulong)(Math.Pow(chance, power + 1) - Math.Pow(highbound, power + 1));
                     result += chance;
                     result -= highbound;
                     Console.WriteLine($"Result becomes {result}, numerator becomes {numerator}");
@@ -1004,7 +1299,7 @@ namespace MothBot
         }
         [Command("DMessage")]
         [Summary("how did you learn of this?")]
-        private async Task dmessageAsynd(ulong userID, [Remainder()] string message = " ")
+        private async Task dmessageAsync(ulong userID, [Remainder()] string message = " ")
         {
             SocketUser? user = null;
             var eb = new EmbedBuilder();
@@ -1190,6 +1485,47 @@ namespace MothBot
             ClassSetups.guildsDict[Context.Guild.Id].ReactionEmoji = newEmojis;
             eb.WithDescription($"Channel set to <#{chanName}>, emojis set to the following: {String.Join(", ",newEmojis)}.");
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
+        }
+        [Command("slowmode")]
+        [Summary("Sets up slowmode in the specified channel to be X seconds.\n\nUsage: `m!slowmode #channel 123`")]
+        private async Task slowmodeAsync(string chanName = "", [Remainder] int seconds = 0)
+        {
+            var eb = new EmbedBuilder();
+            if (chanName == "")
+            {
+                eb.WithDescription("Sets up slowmode in the specified channel to be X seconds.\n\nUsage: `m!slowmode #channel 123`");
+                eb.WithColor(224, 33, 33);
+                await Context.Channel.SendMessageAsync("", false, eb.Build());
+                return;
+            }
+            if (chanName.StartsWith("<#") && chanName.EndsWith(">"))
+                chanName = chanName.Substring(2, chanName.Length - 3);
+            var chan = (ITextChannel)Context.Channel;
+            try
+            {
+                chan = (ITextChannel)Context.Guild.GetChannel(Convert.ToUInt64(chanName));
+                if (chan == null)
+                {
+                    seconds = int.Parse(chanName);
+                    chan = (ITextChannel)Context.Channel;
+                }
+            }
+            catch (FormatException)
+            {
+                seconds = int.Parse(chanName);
+                chan = (ITextChannel)Context.Channel;
+            }
+            var attempt = chan.ModifyAsync(x => x.SlowModeInterval = seconds);
+            attempt.Wait();
+            if (!attempt.IsCompletedSuccessfully)
+            {
+                eb.WithDescription("Failed to change the slowmode. Check if it's possible to set the slowmode to this amount.");
+                eb.WithColor(224, 33, 33);
+                await Context.Channel.SendMessageAsync("", false, eb.Build());
+                return;
+            }
+            eb.WithDescription($"{chan.Mention}'s slowmode interval in seconds has been set to {seconds}.");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
     }
     /*
