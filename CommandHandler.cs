@@ -11,9 +11,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms.Design;
-using YamlDotNet.RepresentationModel;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace MothBot
 {
@@ -1002,7 +999,7 @@ namespace MothBot
     public class TimerCommands : ModuleBase<SocketCommandContext>
     {
         [Command("timerstart")]
-        [Alias("starttimer")]
+        [Alias("starttimer", "start", "timer")]
         [Summary("Starts a timer of the specified length, arguments separate by quotes. Upon ending, the text will be sent in the channel where the command was executed. \\\\\" allows escaping a quotation mark. Optionally allows specifying a short name as separate from the text. \n\nUsage: `m!timerstart 1h 2m 3s \"Timer's name\" \"Text to fire\"`, `m!timerstart 01:02:03 \"Text to fire and timer's name\"`.")]
         private async Task timerStartAsync([Remainder] string inputRaw = "")
         {
@@ -1145,7 +1142,7 @@ namespace MothBot
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("timerdelete")]
-        [Alias("deletetimer", "timercancel", "canceltimer")]
+        [Alias("deletetimer", "timercancel", "canceltimer", "cancel")]
         [Summary("Cancels the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerdelete Timer's name`")]
         private async Task timerDeleteAsync([Remainder] string timerName = "")
         {
@@ -1191,9 +1188,9 @@ namespace MothBot
                     if (timer.Text != timer.Name)
                         txt += $"\n{timer.Text}";
                     if (timer.Paused)
-                        txt += "\nCurrently paused";
+                        txt += $"\nCurrently paused, with {Func.convertSeconds((ulong)timer.RemainingTime)} remaining.";
                     else
-                        txt += "\nCurrently active";
+                        txt += $"\nCurrently active, to end <t:{timer.TimeToFire}:R>.";
                     txt += "\n\n";
                 }
                 txt = txt.TrimEnd();

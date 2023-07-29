@@ -120,7 +120,7 @@ namespace MothBot
                         int offset = (int)(timerCheck.TimeToFire - thisTime);
                         if (timerCheck.Paused)
                         {
-                            if (offset < -604800)
+                            if (offset + timerCheck.RemainingTime < -604800)
                                 guildEntry.Value.Timers.RemoveAt(i);
                             continue;
                         }
