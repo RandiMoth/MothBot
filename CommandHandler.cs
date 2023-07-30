@@ -307,7 +307,10 @@ namespace MothBot
         }
         public static async void MakeReminderAsync(Timer timer, SocketGuild guild, bool late = false, int delay = 0)
         {
+            if (delay < 0)
+                delay = 0;
             var channel = (ISocketMessageChannel)guild.GetChannel(timer.Channel);
+            var timeToFire = timer.TimeToFire;
             var msg = $"<@{timer.User}>: here is your reminder.";
             if (late)
             {
@@ -315,7 +318,7 @@ namespace MothBot
                 msg += $" Due to the bot being offline, the end of the timer has been delayed by {Func.convertSeconds(currentTime-timer.TimeToFire)}.";
             }
             Thread.Sleep(delay * 1000);
-            if (!ClassSetups.guildsDict[guild.Id].Timers.Any(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase) && !tt.Paused))
+            if (!ClassSetups.guildsDict[guild.Id].Timers.Any(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase) && !tt.Paused && tt.TimeToFire == timeToFire))
                 return;
             var index = ClassSetups.guildsDict[guild.Id].Timers.FindIndex(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase));
             ClassSetups.guildsDict[guild.Id].Timers.RemoveAt(index);
@@ -1198,6 +1201,130 @@ namespace MothBot
             }
             eb.WithTitle($"Timers for {user.Username}");
             await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        [Command("timerextend")]
+        [Alias("extendtimer")]
+        [Summary("Extends the timer by the specified time. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerextend 1h 3s \"Timer's name\"`")]
+        private async Task timerExtendAsync([Remainder] string inputRaw = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var inputs = Func.parseQuotes(inputRaw);
+            if (inputs.Count != 2)
+            {
+                eb.WithDescription("Incorrect amount of arguments! The command is used as `m!timerextend 1h 3s \"Timer's name\"`");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var time = Func.HumanTimeToSeconds(inputs[0]);
+            if (time == null)
+            {
+                eb.WithDescription("Failed to convert the time to seconds. Make sure that the time is in a supported format such as `01:02:03` or `1d 2h 3m 4s`.");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase));
+            if (index == -1)
+            {
+                eb.WithDescription("Couldn't find the timer with the specified name");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
+            {
+                eb.WithDescription("You can't extend other people's timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            var txt = $"The timer \"{timer.Name}\" has been extended. ";
+            if (timer.Paused)
+            {
+                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime += (int)time;
+                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
+            }
+            else
+            {
+                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire += (ulong)time;
+                txt += $"It will end <t:{ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire}:R>";
+            }
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription(txt);
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            if (!timer.Paused&&(int)(timer.TimeToFire-thisTime) < 60)
+            {
+                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = true;
+                Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: (int)(timer.TimeToFire - thisTime) + (int)time));
+                childThread.Start();
+            }
+        }
+        [Command("timershorten")]
+        [Alias("shortentimer")]
+        [Summary("Shortens the timer by the specified time. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timershorten 1h 3s \"Timer's name\"`")]
+        private async Task timerShortenAsync([Remainder] string inputRaw = "")
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var inputs = Func.parseQuotes(inputRaw);
+            if (inputs.Count != 2)
+            {
+                eb.WithDescription("Incorrect amount of arguments! The command is used as `m!timerextend 1h 3s \"Timer's name\"`");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var time = Func.HumanTimeToSeconds(inputs[0]);
+            if (time == null)
+            {
+                eb.WithDescription("Failed to convert the time to seconds. Make sure that the time is in a supported format such as `01:02:03` or `1d 2h 3m 4s`.");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase));
+            if (index == -1)
+            {
+                eb.WithDescription("Couldn't find the timer with the specified name");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
+            {
+                eb.WithDescription("You can't shorten other people's timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            //Console.WriteLine($"Time to fire: {timer.TimeToFire}; This time: {thisTime}; Time to change: {time}");
+            if (timer.Paused && timer.RemainingTime<time || !timer.Paused && timer.TimeToFire < thisTime + (ulong)time)
+            {
+                eb.WithDescription("You can't shorten the timer by more than what's left on it!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            var txt = $"The timer \"{timer.Name}\" has been shortened. ";
+            if (timer.Paused)
+            {
+                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime -= (int)time;
+                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
+            }
+            else
+            {
+                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire -= (ulong)time;
+                txt += $"It will end <t:{ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire}:R>";
+            }
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription(txt);
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+            //Console.WriteLine($"Time to fire: {timer.TimeToFire}; This time: {thisTime}; Time to change: {time}");
+            if (!timer.Paused && (int)(timer.TimeToFire - thisTime) < 60)
+            {
+                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = true;
+                Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: (int)(timer.TimeToFire - thisTime) - (int)time));
+                childThread.Start();
+            }
         }
     }
     [Name("Developer commands")]
