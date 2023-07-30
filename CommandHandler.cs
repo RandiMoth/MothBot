@@ -1087,7 +1087,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            if (timer.User != Context.User.Id)
+            if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
             {
                 eb.WithDescription("You can't pause other people's timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
@@ -1122,7 +1122,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            if (timer.User != Context.User.Id)
+            if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
             {
                 eb.WithDescription("You can't unpause other people's timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
@@ -1156,7 +1156,7 @@ namespace MothBot
                 return;
             }
             var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
-            if (timer.User != Context.User.Id)
+            if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
             {
                 eb.WithDescription("You can't delete other people's timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
