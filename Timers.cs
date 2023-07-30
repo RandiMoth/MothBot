@@ -214,7 +214,7 @@ namespace MothBot
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("timerextend")]
-        [Alias("extendtimer")]
+        [Alias("extendtimer", "expand")]
         [Summary("Extends the timer by the specified time. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerextend 1h 3s \"Timer's name\"`")]
         private async Task timerExtendAsync([Remainder] string inputRaw = "")
         {
@@ -272,7 +272,7 @@ namespace MothBot
             }
         }
         [Command("timershorten")]
-        [Alias("shortentimer")]
+        [Alias("shortentimer", "shorten")]
         [Summary("Shortens the timer by the specified time. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timershorten 1h 3s \"Timer's name\"`")]
         private async Task timerShortenAsync([Remainder] string inputRaw = "")
         {
