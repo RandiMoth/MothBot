@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,7 +14,7 @@ namespace MothBot
     public class TimerCommands : ModuleBase<SocketCommandContext>
     {
         [Command("timerstart")]
-        [Alias("starttimer", "start", "timer")]
+        [Alias("starttimer", "start")]
         [Summary("Starts a timer of the specified length, arguments separate by quotes. Upon ending, the text will be sent in the channel where the command was executed. \\\\\" allows escaping a quotation mark. Optionally allows specifying a short name as separate from the text. \n\nUsage: `m!timerstart 1h 2m 3s \"Timer's name\" \"Text to fire\"`, `m!timerstart 01:02:03 \"Text to fire and timer's name\"`.")]
         private async Task timerStartAsync([Remainder] string inputRaw = "")
         {
@@ -85,6 +86,11 @@ namespace MothBot
         [Summary("Pauses the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerpause Timer's name`")]
         private async Task timerPauseAsync([Remainder] string timerName = "")
         {
+            if (timerName.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                await timerPauseAllAsync();
+                return;
+            }
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
             var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
@@ -115,11 +121,46 @@ namespace MothBot
             eb.WithDescription($"The timer \"{timer.Name}\" has been paused. If unpaused, it will end in {Func.convertSeconds(timer.TimeToFire - thisTime)}.");
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
+        [Command("timerpauseall")]
+        [Alias("pausealltimers", "pauseall")]
+        [Summary("Pauses all timers created by you.\n\nUsage: `m!timerpauseall`.")]
+        private async Task timerPauseAllAsync([Remainder] SocketUser? userTarget = null)
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var user = Context.User;
+            if (userTarget != null && Context.User.Id == 491998313399189504)
+                user = userTarget;
+            if (!ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id && !t.Paused))
+            {
+                eb.WithDescription("You don't have any unpaused timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            ClassSetups.guildsDict[Context.Guild.Id].Timers.ForEach(t =>
+            {
+                if (t.User == user.Id && !t.Paused)
+                {
+                    t.Paused = true;
+                    t.Active = false;
+                    t.RemainingTime = (int)(t.TimeToFire - thisTime);
+                }
+            });
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription($"All of your timers have been paused.");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
         [Command("timerunpause")]
         [Alias("unpausetimer", "unpause")]
         [Summary("Unpauses the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerunpause Timer's name`")]
         private async Task timerUnpauseAsync([Remainder] string timerName = "")
         {
+            if (timerName.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                await timerUnpauseAllAsync();
+                return;
+            }
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
             var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
@@ -155,6 +196,42 @@ namespace MothBot
             }
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
+        [Command("timerunpauseall")]
+        [Alias("unpausealltimers", "unpauseall")]
+        [Summary("Unpauses all timers created by you.\n\nUsage: `m!timerunpauseall`.")]
+        private async Task timerUnpauseAllAsync([Remainder] SocketUser? userTarget = null)
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var user = Context.User;
+            if (userTarget != null && Context.User.Id == 491998313399189504)
+                user = userTarget;
+            if (!ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id && t.Paused))
+            {
+                eb.WithDescription("You don't have any paused timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            ClassSetups.guildsDict[Context.Guild.Id].Timers.ForEach(t =>
+            {
+                if (t.User == user.Id && t.Paused)
+                {
+                    t.Paused = false;
+                    t.Active = false;
+                    t.TimeToFire = thisTime + (ulong)t.RemainingTime;
+                    if (t.RemainingTime < 60)
+                    {
+                        t.Active = true;
+                        Thread childThread = new Thread(() => Func.MakeReminderAsync(t, Context.Guild, delay: t.RemainingTime));
+                        childThread.Start();
+                    }
+                }
+            });
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription($"All of your timers have been unpaused.");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
         [Command("timerdelete")]
         [Alias("deletetimer", "timercancel", "canceltimer", "cancel")]
         [Summary("Cancels the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerdelete Timer's name`")]
@@ -182,7 +259,7 @@ namespace MothBot
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("timerlist")]
-        [Alias("listtimers")]
+        [Alias("listtimers", "timers")]
         [Summary("Lists the timer of a user. If the user isn't specified, defaults to the person who used the command. \n\nUsage: `m!timerlist @username`")]
         private async Task timerListAsync([Remainder] SocketUser? user = null)
         {
