@@ -2,8 +2,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using System;
-using System.Linq;
-using System.Reflection;
+using System.Linq;  
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -237,6 +236,11 @@ namespace MothBot
         [Summary("Cancels the timer with the specified name. Case-insensitive, but doesn't ignore punctuation. \n\nUsage: `m!timerdelete Timer's name`")]
         private async Task timerDeleteAsync([Remainder] string timerName = "")
         {
+            if (timerName.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                await timerDeleteAllAsync();
+                return;
+            }
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
             var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
@@ -256,6 +260,28 @@ namespace MothBot
             ClassSetups.guildsDict[Context.Guild.Id].Timers.RemoveAt(index);
             eb.WithColor(51, 127, 213);
             eb.WithDescription($"The timer \"{timer.Name}\" has been deleted.");
+            await Context.Channel.SendMessageAsync("", false, eb.Build());
+        }
+        [Command("timerdeleteall")]
+        [Alias("deletealltimers", "timercancelall", "cancelalltimers", "cancelall")]
+        [Summary("Deletes all timers created by you.\n\nUsage: `m!timerdeleteall`.")]
+        private async Task timerDeleteAllAsync([Remainder] SocketUser? userTarget = null)
+        {
+            var eb = new EmbedBuilder();
+            eb.WithColor(244, 178, 23);
+            var user = Context.User;
+            if (userTarget != null && Context.User.Id == 491998313399189504)
+                user = userTarget;
+            if (!ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id))
+            {
+                eb.WithDescription("You don't have any timers!");
+                await Context.Channel.SendMessageAsync("", embed: eb.Build());
+                return;
+            }
+            ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            ClassSetups.guildsDict[Context.Guild.Id].Timers.RemoveAll(t => t.User == user.Id);
+            eb.WithColor(51, 127, 213);
+            eb.WithDescription($"All of your timers have been deleted.");
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("timerlist")]
