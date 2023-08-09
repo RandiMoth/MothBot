@@ -664,7 +664,7 @@ namespace MothBot
         public async Task HotAsync([Remainder][Summary("The user")] SocketGuildUser? user = null)
         {
             //Console.WriteLine("Received hot command");
-            SocketGuildUser userHot = user ?? (SocketGuildUser)Context.Message.Author;
+            SocketGuildUser userHot = user ?? (SocketGuildUser)Context.User;
             Random rand = new Random(DateTime.Now.ToString().GetHashCode());
             int rv = 0;
             if (userHot.Id == 491998313399189504)
@@ -683,7 +683,7 @@ namespace MothBot
             if (userHot.Id == 943517355068256306)
                 rv = 100;
             var eb = new EmbedBuilder();
-            eb.WithDescription($"{userHot.Nickname ?? userHot.Username} is {rv}% hot.");
+            eb.WithDescription($"{userHot.Nickname ?? userHot.DisplayName} is {rv}% hot.");
             eb.WithColor(247, 71, 91);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
@@ -692,7 +692,7 @@ namespace MothBot
         [Summary("Randomly rates how stupid a user is.\n\nUsage: `m!howstupid <User>`")]
         public async Task StupidAsync([Remainder][Summary("The user")] SocketGuildUser? user = null)
         {
-            SocketGuildUser userHot = user ?? (SocketGuildUser)Context.Message.Author;
+            SocketGuildUser userHot = user ?? (SocketGuildUser)Context.User;
             Random rand = new Random(DateTime.Now.ToString().GetHashCode());
             int rv = 0;
             if (userHot.Id == 491998313399189504)
@@ -709,7 +709,7 @@ namespace MothBot
             if (userHot.Id == 943517355068256306)
                 rv = 0;
             var eb = new EmbedBuilder();
-            eb.WithDescription($"{userHot.Nickname ?? userHot.Username} is {rv}% stupid.");
+            eb.WithDescription($"{userHot.Nickname ?? userHot.DisplayName} is {rv}% stupid.");
             eb.WithColor(247, 71, 91);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }

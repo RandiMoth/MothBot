@@ -287,11 +287,11 @@ namespace MothBot
         [Command("timerlist")]
         [Alias("listtimers", "timers")]
         [Summary("Lists the timer of a user. If the user isn't specified, defaults to the person who used the command. \n\nUsage: `m!timerlist @username`")]
-        private async Task timerListAsync([Remainder] SocketUser? user = null)
+        private async Task timerListAsync([Remainder] SocketGuildUser? user = null)
         {
             var eb = new EmbedBuilder();
             if (user == null)
-                user = Context.User;
+                user = (SocketGuildUser)Context.User;
             var timers = ClassSetups.guildsDict[Context.Guild.Id].Timers.Where(t => t.User == user.Id);
             eb.WithColor(51, 127, 213);
             if (timers.Count() == 0)
@@ -313,7 +313,7 @@ namespace MothBot
                 txt = txt.TrimEnd();
                 eb.WithDescription(txt);
             }
-            eb.WithTitle($"Timers for {user.Username}");
+            eb.WithTitle($"Timers for {user.Nickname ?? user.DisplayName}");
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("timerextend")]

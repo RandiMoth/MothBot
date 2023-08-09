@@ -226,7 +226,7 @@ namespace MothBot
                     yourIndex = i;
                 }
                 //Console.WriteLine(mothCounts[i]);
-                desc += $"{i + 1}. {mothCounts[i].Item2.Nickname ?? mothCounts[i].Item2.Username}: {mothCounts[i].Item1} moth";
+                desc += $"{i + 1}\\. {mothCounts[i].Item2.Nickname ?? mothCounts[i].Item2.DisplayName}: {mothCounts[i].Item1} moth";
                 if (mothCounts[i].Item1 != 1)
                     desc += "s";
                 desc += ".";
