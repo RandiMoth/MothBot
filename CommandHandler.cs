@@ -976,6 +976,8 @@ namespace MothBot
             var threadName = message.Embeds.First().Title;
             if (threadName.Length > 99)
                 threadName = Regex.Match(threadName, @"^.{0,96}\w\b") + "...";
+            if (Regex.IsMatch(threadName, @"^[\s­]*$"))
+                threadName = "Thread";
             var thread = await channel.CreateThreadAsync(threadName, autoArchiveDuration: ThreadArchiveDuration.OneDay, message: message);
             await thread.SendMessageAsync("Discuss this poll in the thread, such as why you've picked an option. If the poll has an \"Other\" option, you can say what you've picked that doesn't fall in the options.");
         }
