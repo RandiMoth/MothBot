@@ -65,7 +65,7 @@ namespace MothBot
         public async Task MainAsync()
         {
             //Console.WriteLine(RuntimeInformation.FrameworkDescription);
-            ClassSetups.setUpDicts();
+            Info.setUpDicts();
             var _config = new DiscordSocketConfig { MessageCacheSize = 100, GatewayIntents = GatewayIntents.All, AlwaysDownloadUsers = true };
             _client = new DiscordSocketClient(_config);
             _client.MessageReceived += HandleCommandAsync;
@@ -107,7 +107,7 @@ namespace MothBot
             {
                 //Console.WriteLine("Minute check");
                 ulong thisTime = Convert.ToUInt64(((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds());
-                foreach (var guildEntry in ClassSetups.guildsDict)
+                foreach (var guildEntry in Info.guildsDict)
                 {
                     var guild = _client.GetGuild(guildEntry.Key);
                     for (var i = 0; i < guildEntry.Value.Timers.Count; i++)
@@ -226,7 +226,7 @@ namespace MothBot
                 message.Author.IsBot/*||message.Author.Id==946143212031078430*/)
                 return;
             //Console.WriteLine(_client.GetGuild(496015504516055042).Name);
-            if (ClassSetups.confirmations.ContainsKey(message.Author.Id) && (ClassSetups.confirmations[message.Author.Id].Purpose!="help"||message.Content.Trim()=="m!help"))
+            if (Info.confirmations.ContainsKey(message.Author.Id) && (Info.confirmations[message.Author.Id].Purpose!="help"||message.Content.Trim()=="m!help"))
                 ConfirmationResponses.cancelConfirmation(message.Author.Id, _client);
 
             // Create a WebSocket-based command context based on the message
@@ -259,12 +259,12 @@ namespace MothBot
             {
                 // Since we set our buttons custom id as 'custom-id', we can check for it like this:
                 case "confirmation-cancel":
-                    if (ClassSetups.confirmations.ContainsKey(userID) && ClassSetups.confirmations[userID].MessageID == messageID)
+                    if (Info.confirmations.ContainsKey(userID) && Info.confirmations[userID].MessageID == messageID)
                         ConfirmationResponses.cancelConfirmation(userID, _client);
                     await component.DeferAsync();
                     break;
                 case "confirmation-confirm":
-                    if (ClassSetups.confirmations.ContainsKey(userID) && ClassSetups.confirmations[userID].MessageID == messageID)
+                    if (Info.confirmations.ContainsKey(userID) && Info.confirmations[userID].MessageID == messageID)
                         ConfirmationResponses.confirmConfirmation(context, userID);
                     await component.DeferAsync();
                     break;
@@ -280,7 +280,7 @@ namespace MothBot
             {
                 // Since we set our buttons custom id as 'custom-id', we can check for it like this:
                 case "helpMenu":
-                    if (ClassSetups.confirmations.ContainsKey(userID) && ClassSetups.confirmations[userID].MessageID == messageID)
+                    if (Info.confirmations.ContainsKey(userID) && Info.confirmations[userID].MessageID == messageID)
                     {
                         Console.WriteLine(text);
                         await HelpHandler.ModuleHelpAsync(text, (SocketGuildUser)component.User, _commands, component.Message);
@@ -310,29 +310,29 @@ namespace MothBot
             else
                 reactMessage = message.Value;
             if (emote.Equals(new Emoji("\u274C"))
-                && ClassSetups.guildsDict[guildID].MessageReactions.Any(x => x.Value.Id == reactMessage.Id)
-                && ClassSetups.guildsDict[guildID].MessageReactions.First(x => x.Value.Id == reactMessage.Id).Value.Author==reaction.UserId)
+                && Info.guildsDict[guildID].MessageReactions.Any(x => x.Value.Id == reactMessage.Id)
+                && Info.guildsDict[guildID].MessageReactions.First(x => x.Value.Id == reactMessage.Id).Value.Author==reaction.UserId)
             {
                 await reactMessage.DeleteAsync();
-                ClassSetups.guildsDict[guildID].MessageReactions.First(x => x.Value.Id == reactMessage.Id).Value.Disabled = true;
+                Info.guildsDict[guildID].MessageReactions.First(x => x.Value.Id == reactMessage.Id).Value.Disabled = true;
                 return;
             }
-            if (ClassSetups.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id)&& ClassSetups.guildsDict[guildID].MessageReactions[reactMessage.Id].Disabled)
+            if (Info.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id)&& Info.guildsDict[guildID].MessageReactions[reactMessage.Id].Disabled)
                 return;
-            var serverEmote = ClassSetups.guildsDict[guildID].ConvertedEmoji();
+            var serverEmote = Info.guildsDict[guildID].ConvertedEmoji();
             ISocketMessageChannel reactchannel;
-            if (ClassSetups.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
-                reactchannel = (ISocketMessageChannel)await ((IGuildChannel)channel.Value).Guild.GetChannelAsync(ClassSetups.guildsDict[guildID].MessageReactions[reactMessage.Id].Channel);
+            if (Info.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
+                reactchannel = (ISocketMessageChannel)await ((IGuildChannel)channel.Value).Guild.GetChannelAsync(Info.guildsDict[guildID].MessageReactions[reactMessage.Id].Channel);
             else
-                reactchannel = (ISocketMessageChannel)await((IGuildChannel)channel.Value).Guild.GetChannelAsync(ClassSetups.guildsDict[guildID].ReactionChannel);
+                reactchannel = (ISocketMessageChannel)await((IGuildChannel)channel.Value).Guild.GetChannelAsync(Info.guildsDict[guildID].ReactionChannel);
             if (serverEmote == null || reactchannel == null)
                 return;
             if (serverEmote.Contains(emote)&& reactMessage.Author.Id != _client.CurrentUser.Id&& reactMessage.Reactions[emote].ReactionCount > 3)
             {
                 //Console.WriteLine("Found correct emoji!");
-                if (ClassSetups.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
+                if (Info.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
                 {
-                    var boardMessage = (IUserMessage)await reactchannel.GetMessageAsync(ClassSetups.guildsDict[guildID].MessageReactions[reactMessage.Id].Id);
+                    var boardMessage = (IUserMessage)await reactchannel.GetMessageAsync(Info.guildsDict[guildID].MessageReactions[reactMessage.Id].Id);
                     var reactionsInMessage = new List<IEmote>();
                     var emojiList = reactMessage.Reactions.Where(x => serverEmote.Contains(x.Key) && x.Value.ReactionCount > 2);
                     var reCount = 0;
@@ -370,7 +370,7 @@ namespace MothBot
                             Disabled = false,
                             Author = reactMessage.Author.Id
                         };
-                        ClassSetups.guildsDict[guildID].MessageReactions.Add(reactMessage.Id, messageEntry);
+                        Info.guildsDict[guildID].MessageReactions.Add(reactMessage.Id, messageEntry);
                         await result.Result.AddReactionAsync(emote);
                     }
                 }
@@ -380,7 +380,7 @@ namespace MothBot
         {
             var emote = reaction.Emote;
             var guildID = ((IGuildChannel)channel.Value).Guild.Id;
-            var serverEmote = ClassSetups.guildsDict[guildID].ConvertedEmoji();
+            var serverEmote = Info.guildsDict[guildID].ConvertedEmoji();
             IUserMessage reactMessage;
             if (!message.HasValue)
             {
@@ -389,25 +389,25 @@ namespace MothBot
             }
             else
                 reactMessage = message.Value;
-            if (ClassSetups.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id) && ClassSetups.guildsDict[guildID].MessageReactions[reactMessage.Id].Disabled)
+            if (Info.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id) && Info.guildsDict[guildID].MessageReactions[reactMessage.Id].Disabled)
                 return;
             ISocketMessageChannel reactchannel;
-            if (ClassSetups.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
-                reactchannel = (ISocketMessageChannel)await ((IGuildChannel)channel.Value).Guild.GetChannelAsync(ClassSetups.guildsDict[guildID].MessageReactions[reactMessage.Id].Channel);
+            if (Info.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
+                reactchannel = (ISocketMessageChannel)await ((IGuildChannel)channel.Value).Guild.GetChannelAsync(Info.guildsDict[guildID].MessageReactions[reactMessage.Id].Channel);
             else
-                reactchannel = (ISocketMessageChannel)await ((IGuildChannel)channel.Value).Guild.GetChannelAsync(ClassSetups.guildsDict[guildID].ReactionChannel);
+                reactchannel = (ISocketMessageChannel)await ((IGuildChannel)channel.Value).Guild.GetChannelAsync(Info.guildsDict[guildID].ReactionChannel);
             if (serverEmote == null || reactchannel == null)
                 return;
             if (serverEmote.Contains(emote) && reactMessage.Author.Id != _client.CurrentUser.Id)
             {
                 //Console.WriteLine("Found correct emoji!");
-                if (ClassSetups.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
+                if (Info.guildsDict[guildID].MessageReactions.ContainsKey(reactMessage.Id))
                 {
-                    var boardMessage = (IUserMessage)await reactchannel.GetMessageAsync(ClassSetups.guildsDict[guildID].MessageReactions[reactMessage.Id].Id);
+                    var boardMessage = (IUserMessage)await reactchannel.GetMessageAsync(Info.guildsDict[guildID].MessageReactions[reactMessage.Id].Id);
                     if (!reactMessage.Reactions.Any(x => serverEmote.Contains(x.Key)&&x.Value.ReactionCount>2))
                     {
                         await boardMessage.DeleteAsync();
-                        ClassSetups.guildsDict[guildID].MessageReactions.Remove(reactMessage.Id);
+                        Info.guildsDict[guildID].MessageReactions.Remove(reactMessage.Id);
                     }
                     else
                     {

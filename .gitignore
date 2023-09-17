@@ -3,3 +3,4 @@ obj/*
 *.clef
 *.sarif
 .vs/*
+Secret.cs

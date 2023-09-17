@@ -1,0 +1,22 @@
+MothUpdate: Currently fetching moths, please await... 
+SayEmpty: Please enter what to say with `m!say \<text\>`.
+SayNoAccess: You can only use the bot to send messages in channels you can send messages in yourself.
+SayNoText: Please enter a message to send in the specified channel.
+ReactEmpty: Please specify the message and the reaction with `m!react \<message link\> \<emoji\>`.
+InvalidMessageLink: Please enter a valid message link!
+FailReact: Failed to add the reaction!
+SuccessReact: Reaction added successfully.
+HotMsg: /n is /1\% hot.
+StupidMsg: /n is /1\% stupid.
+NickEmpty: Please enter a nickname to change to with `m!nickname \<bot name\>`.
+NickLong: This is too long to be a nickname!
+NickSuccess: Nickname change successful!
+RoleUnassigned: You are not assigned this role.
+RoleColourChange: The colour of $MENTION|ROLE|/1$ has been changed!
+
+NoEmoji: Couldn't find the emoji!
+NoServer: Couldn't find the server!
+NoChannel: Couldn't find the channel!
+NoMessage: Couldn't find the message!
+NoRole: Please enter a valid role.
+NoColour: Please enter a valid hex code.

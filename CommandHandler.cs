@@ -19,7 +19,7 @@ namespace MothBot
         private enum states { NOT_IN_QUOTES, IN_QUOTES, ESCAPE_CHAR }
         public static string ConvertEmojis(string str)
         {
-            foreach (var x in ClassSetups.emojisDict)
+            foreach (var x in Info.emojisDict)
             {
                 str = Regex.Replace(str,$@"(?i)(?<!\\)(?(?<=<):{x.Key}:(?!\d*>)|:{x.Key}:)", $"<$&{x.Value}>");
             }
@@ -132,13 +132,13 @@ namespace MothBot
         }
         public static void UserFailsafe(ulong userID)
         {
-            if (!ClassSetups.usersDict.ContainsKey(userID))
-                ClassSetups.usersDict.Add(userID, new User());
+            if (!Info.usersDict.ContainsKey(userID))
+                Info.usersDict.Add(userID, new User());
         }
         public static void GuildFailsafe(ulong guildID)
         {
-            if (!ClassSetups.guildsDict.ContainsKey(guildID))
-                ClassSetups.guildsDict.Add(guildID, new Guild());
+            if (!Info.guildsDict.ContainsKey(guildID))
+                Info.guildsDict.Add(guildID, new Guild());
         }
         public static int? HumanTimeToSeconds(string rawTime)
         {
@@ -318,10 +318,10 @@ namespace MothBot
                 msg += $" Due to the bot being offline, the end of the timer has been delayed by {Func.convertSeconds(currentTime-timer.TimeToFire)}.";
             }
             Thread.Sleep(delay * 1000);
-            if (!ClassSetups.guildsDict[guild.Id].Timers.Any(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase) && !tt.Paused && tt.TimeToFire == timeToFire))
+            if (!Info.guildsDict[guild.Id].Timers.Any(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase) && !tt.Paused && tt.TimeToFire == timeToFire))
                 return;
-            var index = ClassSetups.guildsDict[guild.Id].Timers.FindIndex(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase));
-            ClassSetups.guildsDict[guild.Id].Timers.RemoveAt(index);
+            var index = Info.guildsDict[guild.Id].Timers.FindIndex(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase));
+            Info.guildsDict[guild.Id].Timers.RemoveAt(index);
             var eb = new EmbedBuilder();
             eb.WithDescription(timer.Text);
             eb.WithColor(51, 127, 213);
@@ -382,7 +382,7 @@ namespace MothBot
                     GuildID = Context.Guild.Id,
                     Purpose = "help"
                 };
-                ClassSetups.confirmations.Add(Context.User.Id, newConfirmation);
+                Info.confirmations.Add(Context.User.Id, newConfirmation);
                 var childref = new ThreadStart(HelpDisablingSetup);
                 Thread childThread = new Thread(childref);
                 childThread.Start();
@@ -423,12 +423,12 @@ namespace MothBot
 
         private void HelpDisablingSetup()
         {
-            var messageID = ClassSetups.confirmations[Context.User.Id].MessageID;
+            var messageID = Info.confirmations[Context.User.Id].MessageID;
             var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
             Thread.Sleep(30000);
-            if (ClassSetups.confirmations.ContainsKey(Context.User.Id))
+            if (Info.confirmations.ContainsKey(Context.User.Id))
             {
-                ClassSetups.confirmations.Remove(Context.User.Id);
+                Info.confirmations.Remove(Context.User.Id);
                 Func.disableButtons(message);
             }
         }
@@ -491,7 +491,7 @@ namespace MothBot
         public async Task MothsAsync([Remainder()] string s = "")
         {
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            if (thisTime - ClassSetups.lastReddit >= 21600)
+            if (thisTime - Info.lastReddit >= 21600)
             {
                 var childref = new ThreadStart(MothUpdate);
                 Thread childThread = new Thread(childref);
@@ -499,11 +499,11 @@ namespace MothBot
                 return;
             }
             Random rand = new Random(DateTime.Now.ToString().GetHashCode());
-            int bound = ClassSetups.posts.Count;
+            int bound = Info.posts.Count;
             if (bound > 20)
                 bound = 20;
             int index = rand.Next(0, bound);
-            var post = (LinkPost)ClassSetups.posts[index];
+            var post = (LinkPost)Info.posts[index];
             var eb = new EmbedBuilder();
             eb.WithImageUrl(post.URL);
             eb.WithDescription($"[{post.Title}](https://np.reddit.com{post.Permalink})");
@@ -512,16 +512,16 @@ namespace MothBot
         private async void MothUpdate()
         {
             var eb = new EmbedBuilder();
-            eb.WithDescription("Currently fetching moths, please await...");
+            eb.WithDescription(Localisation.GetLoc("MothUpdate", Info.GetUser(Context.User.Id).Language));
             var message = await Context.Channel.SendMessageAsync("", false, eb.Build());
-            ClassSetups.redditUpdate();
-            ClassSetups.lastReddit = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
+            Info.redditUpdate();
+            Info.lastReddit = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
             Random rand = new Random(DateTime.Now.ToString().GetHashCode());
-            int bound = ClassSetups.posts.Count;
+            int bound = Info.posts.Count;
             if (bound > 20)
                 bound = 20;
             int index = rand.Next(0, bound);
-            var post = (LinkPost)ClassSetups.posts[index];
+            var post = (LinkPost)Info.posts[index];
             eb.WithImageUrl(post.URL);
             eb.WithDescription($"[{post.Title}](https://np.reddit.com{post.Permalink})");
             await message.ModifyAsync(msg => msg.Embed = eb.Build());
@@ -533,7 +533,7 @@ namespace MothBot
             var eb = new EmbedBuilder();
             if (chanName == "")
             {
-                eb.WithDescription("Please enter what to say with `m!say <text>`.");
+                eb.WithDescription(Localisation.GetLoc("SayEmpty", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
@@ -572,12 +572,12 @@ namespace MothBot
                     await chan.SendMessageAsync(echo, allowedMentions: AllowedMentions.None);
                     return;
                 }
-                eb.WithDescription("You can only use the bot to send messages in channels you can send messages in yourself.");
+                eb.WithDescription(Localisation.GetLoc("SayNoAccess", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            eb.WithDescription("Please enter a message to send in the specified channel.");
+            eb.WithDescription(Localisation.GetLoc("SayNoText", Info.GetUser(Context.User.Id).Language));
             eb.WithColor(224, 33, 33);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
@@ -588,14 +588,14 @@ namespace MothBot
             var eb = new EmbedBuilder();
             if (messageLink == "" || emojiName == "")
             {
-                eb.WithDescription("Please specify the message and the reaction with `m!react <message link> <emoji>`.");
+                eb.WithDescription(Localisation.GetLoc("ReactEmpty", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
             if (!Regex.IsMatch(messageLink, @"\Ahttps://discord.com/channels/\d*/\d*/\d*\Z"))
             {
-                eb.WithDescription("Please enter a valid message link!");
+                eb.WithDescription(Localisation.GetLoc("InvalidMessageLink", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
@@ -614,7 +614,7 @@ namespace MothBot
             }
             if (emoji == null)
             {
-                eb.WithDescription("Couldn't find the emoji!");
+                eb.WithDescription(Localisation.GetLoc("NoEmoji", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
@@ -622,7 +622,7 @@ namespace MothBot
             var messageArray = messageLink.Split("/", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (Convert.ToUInt64(messageArray[3]) != Context.Guild.Id)
             {
-                eb.WithDescription("The message has to be in the same server!");
+                eb.WithDescription(Localisation.GetLoc("NoServer", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
@@ -631,7 +631,7 @@ namespace MothBot
             chan = (ISocketMessageChannel)Context.Guild.GetChannel(Convert.ToUInt64(messageArray[4]));
             if (chan == null)
             {
-                eb.WithDescription("Couldn't find the channel!");
+                eb.WithDescription(Localisation.GetLoc("NoChannel", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
@@ -639,7 +639,7 @@ namespace MothBot
             var message = await chan.GetMessageAsync(Convert.ToUInt64(messageArray[5]));
             if (message == null)
             {
-                eb.WithDescription("Couldn't find the message!");
+                eb.WithDescription(Localisation.GetLoc("NoMessage", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
@@ -648,12 +648,12 @@ namespace MothBot
             result.Wait();
             if (!result.IsCompleted)
             {
-                eb.WithDescription("Failed to add the reaction!");
+                eb.WithDescription(Localisation.GetLoc("FailReact", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            eb.WithDescription("Reaction added successfully.");
+            eb.WithDescription(Localisation.GetLoc("SuccessReact", Info.GetUser(Context.User.Id).Language));
             eb.WithColor(72, 139, 48);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
             return;
@@ -683,7 +683,7 @@ namespace MothBot
             if (userHot.Id == 943517355068256306)
                 rv = 100;
             var eb = new EmbedBuilder();
-            eb.WithDescription($"{userHot.Nickname ?? userHot.DisplayName} is {rv}% hot.");
+            eb.WithDescription(Localisation.GetLoc("HotMsg", Info.GetUser(Context.User.Id).Language, userHot, rv.ToString()));
             eb.WithColor(247, 71, 91);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
@@ -709,7 +709,7 @@ namespace MothBot
             if (userHot.Id == 943517355068256306)
                 rv = 0;
             var eb = new EmbedBuilder();
-            eb.WithDescription($"{userHot.Nickname ?? userHot.DisplayName} is {rv}% stupid.");
+            eb.WithDescription(Localisation.GetLoc("StupidMsg", Info.GetUser(Context.User.Id).Language, userHot, rv.ToString()));
             eb.WithColor(247, 71, 91);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
@@ -731,21 +731,21 @@ namespace MothBot
             nick = nick.Replace("­", "").Trim();
             if (nick == "")
             {
-                eb.WithDescription("Please enter a nickname to change to with `m!nickname <bot name>`.");
+                eb.WithDescription(Localisation.GetLoc("NickEmpty", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
             if (nick.Length > 32)
             {
-                eb.WithDescription("This is too long to be a nickname!");
+                eb.WithDescription(Localisation.GetLoc("NickLong", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
             var user = Context.Guild.GetUser(Context.Client.CurrentUser.Id);
             await user.ModifyAsync(x => { x.Nickname = nick; });
-            eb.WithDescription("Nickname change successful!");
+            eb.WithDescription(Localisation.GetLoc("NickSuccess", Info.GetUser(Context.User.Id).Language));
             eb.WithColor(72, 139, 48);
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
         }
@@ -765,7 +765,7 @@ namespace MothBot
             var role = Func.getRole(roleString, Context.Guild);
             if (role == null)
             {
-                eb.WithDescription("Please enter a valid role!");
+                eb.WithDescription(Localisation.GetLoc("NoRole", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
@@ -773,10 +773,10 @@ namespace MothBot
             var user = (SocketGuildUser)Context.User;
             if (!user.GuildPermissions.ManageGuild)
             {
-                var roleList = ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
+                var roleList = Info.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
                 if (!roleList.Contains(role.Id))
                 {
-                    eb.WithDescription("You are not assigned this role.");
+                    eb.WithDescription(Localisation.GetLoc("RoleUnassigned", Info.GetUser(Context.User.Id).Language));
                     eb.WithColor(224, 33, 33);
                     await Context.Channel.SendMessageAsync("", false, eb.Build());
                     return;
@@ -785,14 +785,14 @@ namespace MothBot
             var colour = Func.readHexCode(hexCode);
             if (colour == null)
             {
-                eb.WithDescription("Please enter a valid hex code!");
+                eb.WithDescription(Localisation.GetLoc("NoColour", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
             var c = new Color(colour[0], colour[1], colour[2]);
             await role.ModifyAsync(x => { x.Color = c; });
-            eb.WithDescription($"The colour of <@&{role.Id}> has been changed!");
+            eb.WithDescription(Localisation.GetLoc("RoleColourChange", Info.GetUser(Context.User.Id).Language, Context1: role.Id.ToString()));
             if (c == new Color(0, 0, 0))
                 eb.WithDescription($"The colour of <@&{role.Id}> has been reset!");
             else
@@ -803,7 +803,7 @@ namespace MothBot
         {
             if (hexCode == "reset")
                 hexCode = "#000000";
-            var roleList = ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[Context.User.Id];
+            var roleList = Info.guildsDict[Context.Guild.Id].AssignedRoles[Context.User.Id];
             var eb = new EmbedBuilder();
             if (roleList.Count == 0)
             {
@@ -924,13 +924,13 @@ namespace MothBot
             var user = (SocketGuildUser)Context.User;
             if (!user.GuildPermissions.ManageGuild)
             {
-                if (currentTime - ClassSetups.guildsDict[Context.Guild.Id].LastPoll < 60)
+                if (currentTime - Info.guildsDict[Context.Guild.Id].LastPoll < 60)
                 {
                     eb.WithDescription("A poll was already posted in the last minute. To prevent spam, this has been restricted.");
                     await Context.Channel.SendMessageAsync("", embed: eb.Build());
                     return;
                 }
-                if (currentTime - ClassSetups.usersDict[user.Id].LastTimes.Poll < 18000)
+                if (currentTime - Info.usersDict[user.Id].LastTimes.Poll < 18000)
                 {
                     eb.WithDescription("A poll was already made by you in the last 5 hours. To prevent spam, this has been restricted.");
                     await Context.Channel.SendMessageAsync("", embed: eb.Build());
@@ -954,12 +954,12 @@ namespace MothBot
                 attach = Context.Message.Attachments.First();
                 eb.WithImageUrl(attach.Url);
             }
-            var channel = (ISocketMessageChannel)Context.Guild.GetChannel(ClassSetups.guildsDict[Context.Guild.Id].PollChannel);
+            var channel = (ISocketMessageChannel)Context.Guild.GetChannel(Info.guildsDict[Context.Guild.Id].PollChannel);
             var message = await channel.SendMessageAsync("", false, eb.Build());
             Thread childThread = new Thread(() => PollReaction(message, pollOptions.Count));
             childThread.Start();
-            ClassSetups.guildsDict[Context.Guild.Id].LastPoll = currentTime;
-            ClassSetups.usersDict[Context.User.Id].LastTimes.Poll = currentTime;
+            Info.guildsDict[Context.Guild.Id].LastPoll = currentTime;
+            Info.usersDict[Context.User.Id].LastTimes.Poll = currentTime;
             eb = new EmbedBuilder();
             eb.WithColor(51, 127, 213);
             eb.WithTitle("The poll has been sent.");
@@ -1074,27 +1074,27 @@ namespace MothBot
             Console.WriteLine($"The chance of the focus being picked is approximately {Math.Round(result * 100, 2)}% or exactly {numerator}/{newDem}.\n");
         }
         [Command("forceOverwrite")]
-        [Summary("how did you learn of this?")]
+        [Summary(".")]
         private async Task overwriteAsync([Remainder()] string s = "")
         {
-            var succrun = ClassSetups.writeDynamicInfo("info\\", 1);
+            var succrun = Info.writeDynamicInfo("info\\", 1);
             if (!succrun)
                 await Context.Channel.SendMessageAsync("Files failed to overwrite.");
             else
                 await Context.Channel.SendMessageAsync("Files overwritten.");
         }
         [Command("forceBackup")]
-        [Summary("how did you learn of this?")]
+        [Summary(".")]
         private async Task backupAsync([Remainder()] string s = "")
         {
             var time = DateTime.Now;
             var folderName = $"info\\backup\\{time.Year}-{time.Month}-{time.Day}-{time.Hour}-{time.Minute}\\";
             Directory.CreateDirectory(folderName);
-            ClassSetups.CreateBackup(folderName);
+            Info.CreateBackup(folderName);
             await Context.Channel.SendMessageAsync("Files overwritten.");
         }
         [Command("DMessage")]
-        [Summary("how did you learn of this?")]
+        [Summary(".")]
         private async Task dmessageAsync(ulong userID, [Remainder()] string message = " ")
         {
             SocketUser? user = null;
@@ -1137,6 +1137,16 @@ namespace MothBot
             eb.WithDescription($"Messaged user {user.Username}#{user.Discriminator}");
             await ReplyAsync("", false, eb.Build());
         }
+        [Command("EnglishCheck")]
+        [Summary(".")]
+        private async Task englishAsync([Remainder()] string message = " ")
+        {
+            foreach (KeyValuePair<string, string> entry in Info.englishDict)
+            {
+                Console.WriteLine(entry.Key + "\n" + entry.Value);
+            }
+            ReplyAsync("Printed to console");
+        }
     }
     [Name("Admin commands")]
     [Summary("Commands that require moderator permissions")]
@@ -1158,7 +1168,7 @@ namespace MothBot
             }
             try
             {
-                var roleList = ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
+                var roleList = Info.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
                 if (roleList.Contains(role.Id))
                 {
                     eb.WithColor(224, 33, 33);
@@ -1166,11 +1176,11 @@ namespace MothBot
                     await Context.Channel.SendMessageAsync("", embed: eb.Build());
                     return;
                 }
-                ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[user.Id].Add(role.Id);
+                Info.guildsDict[Context.Guild.Id].AssignedRoles[user.Id].Add(role.Id);
             }
             catch (KeyNotFoundException)
             {
-                ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles.Add(user.Id, new List<ulong>() { role.Id });
+                Info.guildsDict[Context.Guild.Id].AssignedRoles.Add(user.Id, new List<ulong>() { role.Id });
             }
             eb.WithColor(72, 139, 48);
             eb.WithDescription($"The {role.Mention} role has been assigned to {user.Mention}");
@@ -1190,7 +1200,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var roleList = ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
+            var roleList = Info.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
             if (!roleList.Contains(role.Id))
             {
                 eb.WithColor(224, 33, 33);
@@ -1201,7 +1211,7 @@ namespace MothBot
             eb.WithColor(72, 139, 48);
             eb.WithDescription($"The {role.Mention} role has been removed from {user.Mention}");
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
-            ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[user.Id].Remove(role.Id);
+            Info.guildsDict[Context.Guild.Id].AssignedRoles[user.Id].Remove(role.Id);
         }
         [Command("listroles")]
         [Summary("Lists roles the user has for the `m!colour` command.\n\nUsage: `m!removerole <user>`")]
@@ -1211,7 +1221,7 @@ namespace MothBot
             string s;
             try
             {
-                var roleList = ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
+                var roleList = Info.guildsDict[Context.Guild.Id].AssignedRoles[user.Id];
                 eb.WithColor(244, 178, 23);
                 s = $"{user.Mention} has the following roles for `m!colour`:\n";
                 if (roleList.Count == 0)
@@ -1223,7 +1233,7 @@ namespace MothBot
             catch (KeyNotFoundException)
             {
                 s = $"{user.Mention} has no roles for `m!colour`.";
-                ClassSetups.guildsDict[Context.Guild.Id].AssignedRoles.Add(user.Id,new List<ulong>());
+                Info.guildsDict[Context.Guild.Id].AssignedRoles.Add(user.Id,new List<ulong>());
             }
             eb.WithDescription(s);
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
@@ -1234,7 +1244,7 @@ namespace MothBot
         {
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
-            eb.WithDescription($"This server currently has {ClassSetups.guildsDict[Context.Guild.Id].Taxes} moths in the treasury collected from taxes.");
+            eb.WithDescription($"This server currently has {Info.guildsDict[Context.Guild.Id].Taxes} moths in the treasury collected from taxes.");
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
         }
         [Command("reactionsettings")]
@@ -1277,8 +1287,8 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            ClassSetups.guildsDict[Context.Guild.Id].ReactionChannel = chan.Id;
-            ClassSetups.guildsDict[Context.Guild.Id].ReactionEmoji = newEmojis;
+            Info.guildsDict[Context.Guild.Id].ReactionChannel = chan.Id;
+            Info.guildsDict[Context.Guild.Id].ReactionEmoji = newEmojis;
             eb.WithDescription($"Channel set to <#{chanName}>, emojis set to the following: {String.Join(", ",newEmojis)}.");
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
         }

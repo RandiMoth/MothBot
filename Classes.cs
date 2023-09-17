@@ -1,17 +1,21 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using MothBot.Properties;
 using Reddit;
 using Reddit.Controllers;
 using Reddit.Inputs;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using YamlDotNet.Serialization;
 
 namespace MothBot
 {
+    public enum Language { L_ENGLISH }; 
     public class Price
     {
         public ulong BasePrice { get; set; } = 0;
@@ -68,7 +72,7 @@ namespace MothBot
     {
         public ulong MothAmount { get; set; } = 0;
         public LastTimes LastTimes { get; set; } = new LastTimes();
-
+        public Language Language { get; set; } = Language.L_ENGLISH;
         public Dictionary<string, ulong> Items = new Dictionary<string, ulong>();
     }
     public class Confirmation
@@ -105,8 +109,8 @@ namespace MothBot
     {
         public static async void confirmConfirmation(SocketCommandContext context, ulong userID)
         {
-            var confirmation = ClassSetups.confirmations[userID];
-            ClassSetups.confirmations.Remove(userID);
+            var confirmation = Info.confirmations[userID];
+            Info.confirmations.Remove(userID);
             var guild = context.Guild;
             var channel = context.Channel;
             var message = context.Message;
@@ -129,8 +133,8 @@ namespace MothBot
         }
         public static async void cancelConfirmation(ulong userID, DiscordSocketClient _client)
         {
-            var confirmation = ClassSetups.confirmations[userID];
-            ClassSetups.confirmations.Remove(userID);
+            var confirmation = Info.confirmations[userID];
+            Info.confirmations.Remove(userID);
             var guild = _client.GetGuild(confirmation.GuildID);
             var channel = (ISocketMessageChannel)guild.GetChannel(confirmation.ChannelID);
             var message = (IUserMessage)channel.GetMessageAsync(confirmation.MessageID).Result;
@@ -155,15 +159,15 @@ namespace MothBot
         }
         public static async void GiftConfirm(SocketGuild guild, ISocketMessageChannel channel, ulong userID, ulong recipientID, ulong mothAmount)
         {
-            ClassSetups.usersDict[userID].MothAmount -= mothAmount;
-            ClassSetups.usersDict[recipientID].MothAmount += mothAmount;
+            Info.usersDict[userID].MothAmount -= mothAmount;
+            Info.usersDict[recipientID].MothAmount += mothAmount;
             var title = $"You've gifted {mothAmount} moth";
             if (mothAmount != 1)
                 title += "s";
             var recipient = guild.GetUser(recipientID);
             title += $" to {recipient.Nickname ?? recipient.Username}.";
-            var desc = $"You currently have **{ClassSetups.usersDict[userID].MothAmount}** moth";
-            if (ClassSetups.usersDict[userID].MothAmount != 1)
+            var desc = $"You currently have **{Info.usersDict[userID].MothAmount}** moth";
+            if (Info.usersDict[userID].MothAmount != 1)
                 desc += "s";
             desc += $".\n\n*Currently viewing <@{userID}>*";
             var eb = new EmbedBuilder();
@@ -180,25 +184,25 @@ namespace MothBot
                 return;
             }
             if (item.Cooldown > 0)
-                ClassSetups.usersDict[userID].LastTimes.Item[item.Id] = Convert.ToUInt64(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                Info.usersDict[userID].LastTimes.Item[item.Id] = Convert.ToUInt64(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
             try
             {
-                ClassSetups.usersDict[userID].Items[item.Id]++;
+                Info.usersDict[userID].Items[item.Id]++;
             }
             catch (KeyNotFoundException)
             {
-                ClassSetups.usersDict[userID].Items.Add(item.Id, 1);
+                Info.usersDict[userID].Items.Add(item.Id, 1);
             }
-            ClassSetups.guildsDict[guild.Id].Taxes += taxAmount;
-            ClassSetups.usersDict[userID].MothAmount -= mothAmount;
+            Info.guildsDict[guild.Id].Taxes += taxAmount;
+            Info.usersDict[userID].MothAmount -= mothAmount;
             var title = $"You've successfully bought {item.Name}.";
             var desc = $"{mothAmount} moth";
             if (mothAmount != 1)
                 desc += "s";
-            desc += $" were spent on the purchase, including {taxAmount} in taxes.\n\nYou currently have **{ClassSetups.usersDict[userID].MothAmount}** moth";
-            if (ClassSetups.usersDict[userID].MothAmount != 1)
+            desc += $" were spent on the purchase, including {taxAmount} in taxes.\n\nYou currently have **{Info.usersDict[userID].MothAmount}** moth";
+            if (Info.usersDict[userID].MothAmount != 1)
                 desc += "s";
-            desc += $" and {ClassSetups.usersDict[userID].Items[item.Id]} of this item.\n\n*Currently viewing <@{userID}>*";
+            desc += $" and {Info.usersDict[userID].Items[item.Id]} of this item.\n\n*Currently viewing <@{userID}>*";
             var eb = new EmbedBuilder();
             eb.WithColor(72, 139, 48);
             eb.WithTitle(title);
@@ -216,7 +220,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            var muteRole = Context.Guild.GetRole(ClassSetups.guildsDict[Context.Guild.Id].MuteRole);
+            var muteRole = Context.Guild.GetRole(Info.guildsDict[Context.Guild.Id].MuteRole);
             if (muteRole == null)
             {
                 eb.WithDescription("Couldn't find a role to mute. Please ask the mods to assign it with `m!muterole`.");
@@ -236,7 +240,7 @@ namespace MothBot
             eb.WithDescription($"{user.Mention} has been muted for 5 minutes.");
             eb.WithColor(72, 139, 48);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
-            ClassSetups.usersDict[userID].Items["muteitem"]--;
+            Info.usersDict[userID].Items["muteitem"]--;
             var t = new Thread(() => RememberUnmute(muteRole, user, Context.Guild));
             t.Start();
         }
@@ -247,7 +251,7 @@ namespace MothBot
             await user.SendMessageAsync($"Your mute on {guild.Name} has run out.");
         }
     }
-    public static class ClassSetups
+    public static class Info
     {
         public static Dictionary<string, ulong> emojisDict = new Dictionary<string, ulong>();
         public static Dictionary<string,Item> itemsDict = new Dictionary<string, Item>();
@@ -257,6 +261,7 @@ namespace MothBot
         public static Dictionary<ulong, Guild> guildsDict = new Dictionary<ulong, Guild>();
         public static Dictionary<ulong, User> usersDict = new Dictionary<ulong, User>();
         public static Dictionary<ulong, StorePage> storePagesDict = new Dictionary<ulong, StorePage>();
+        public static Dictionary<string,string> englishDict = new Dictionary<string, string>();
         public static void setUpDicts()
         {
             var deserializer = new DeserializerBuilder().Build();
@@ -265,6 +270,8 @@ namespace MothBot
             emojisDict = deserializer.Deserialize<Dictionary<string, ulong>>(new StringReader(File.ReadAllText("info/emoji_info.yaml")));
             usersDict = deserializer.Deserialize<Dictionary<ulong, User>>(new StringReader(File.ReadAllText("info/user_info.yaml")));
             storePagesDict = deserializer.Deserialize<Dictionary<ulong, StorePage>>(new StringReader(File.ReadAllText("info/store_info.yaml")));
+            //Console.WriteLine(System.Text.Encoding.UTF8.GetString(Resources.en));
+            englishDict = deserializer.Deserialize<Dictionary<string, string>>(new StringReader(System.Text.Encoding.UTF8.GetString(Resources.en)));
             if (guildsDict == null || usersDict == null)
             {
                 Console.WriteLine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
@@ -365,6 +372,10 @@ namespace MothBot
                     return true;
                 }
             });
+        }
+        public static User GetUser(ulong id)
+        {
+            return usersDict[id];
         }
     }
 }

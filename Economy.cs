@@ -19,7 +19,7 @@ namespace MothBot
             bool foundItem = false;
             if (str.Length < 3)
                 return null;
-            foreach (var x in ClassSetups.itemsDict)
+            foreach (var x in Info.itemsDict)
             {
                 if (x.Key.StartsWith(str, StringComparison.OrdinalIgnoreCase) || x.Value.Name.StartsWith(str, StringComparison.OrdinalIgnoreCase))
                 {
@@ -68,13 +68,13 @@ namespace MothBot
         //[Alias("moth", "oths", "oth")]
         public async Task DailyAsync([Remainder()] string s = "")
         {
-            var lastTime = ClassSetups.usersDict[Context.User.Id].LastTimes.Daily / 86400;
+            var lastTime = Info.usersDict[Context.User.Id].LastTimes.Daily / 86400;
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
             bool claimedReward = false;
             if (thisTime / 86400 > lastTime)
             {
-                ClassSetups.usersDict[Context.User.Id].MothAmount += 1000;
-                ClassSetups.usersDict[Context.User.Id].LastTimes.Daily = thisTime;
+                Info.usersDict[Context.User.Id].MothAmount += 1000;
+                Info.usersDict[Context.User.Id].LastTimes.Daily = thisTime;
                 claimedReward = true;
             }
             var eb = new EmbedBuilder();
@@ -83,7 +83,7 @@ namespace MothBot
             if (claimedReward)
             {
                 title = "You have claimed your daily reward!";
-                desc += $"You currently have **{ClassSetups.usersDict[Context.User.Id].MothAmount}** moth";
+                desc += $"You currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
                 eb.WithColor(72, 139, 48);
             }
             else
@@ -94,10 +94,10 @@ namespace MothBot
                     desc += " remain";
                 else
                     desc += " remains";
-                desc += $" until your next daily reward.\n\nYou currently have **{ClassSetups.usersDict[Context.User.Id].MothAmount}** moth";
+                desc += $" until your next daily reward.\n\nYou currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
                 eb.WithColor(224, 33, 33);
             }
-            if (ClassSetups.usersDict[Context.User.Id].MothAmount != 1)
+            if (Info.usersDict[Context.User.Id].MothAmount != 1)
                 desc += "s.";
             else
                 desc += ".";
@@ -117,27 +117,27 @@ namespace MothBot
                 return;
             }
             var eb = new EmbedBuilder();
-            var lastTime = ClassSetups.usersDict[Context.User.Id].LastTimes.Search;
+            var lastTime = Info.usersDict[Context.User.Id].LastTimes.Search;
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
             bool claimedReward = false;
             string title = "";
             string desc = "";
             if (thisTime - 30 >= lastTime)
             {
-                ClassSetups.usersDict[Context.User.Id].LastTimes.Search = thisTime;
+                Info.usersDict[Context.User.Id].LastTimes.Search = thisTime;
                 Random rand = new Random(DateTime.Now.ToString().GetHashCode());
                 int rv = rand.Next() % 100;
                 Console.WriteLine(rv + " " + Context.User.Username);
                 if (rv <= 1)
                 {
                     title += $"You've abducted a moth from outside! It seems to be shiny, worth 100 times as much!";
-                    ClassSetups.usersDict[Context.User.Id].MothAmount += 100;
+                    Info.usersDict[Context.User.Id].MothAmount += 100;
                     eb.WithColor(72, 139, 48);
                 }
                 else if (rv < 15)
                 {
                     title += $"You've abducted a cluster of moths from outside! Seems as if there were 5.";
-                    ClassSetups.usersDict[Context.User.Id].MothAmount += 5;
+                    Info.usersDict[Context.User.Id].MothAmount += 5;
                     eb.WithColor(72, 139, 48);
                 }
                 else if (rv >= 80)
@@ -148,14 +148,14 @@ namespace MothBot
                 else
                 {
                     title += $"You've abducted a moth from outside!";
-                    ClassSetups.usersDict[Context.User.Id].MothAmount += 1;
+                    Info.usersDict[Context.User.Id].MothAmount += 1;
                     eb.WithColor(72, 139, 48);
                 }
                 claimedReward = true;
             }
             if (claimedReward)
             {
-                desc += $"You currently have **{ClassSetups.usersDict[Context.User.Id].MothAmount}** moth";
+                desc += $"You currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
             }
             else
             {
@@ -165,10 +165,10 @@ namespace MothBot
                     desc += " remain";
                 else
                     desc += " remains";
-                desc += $" until you're next able to go outside.\n\nYou currently have **{ClassSetups.usersDict[Context.User.Id].MothAmount}** moth";
+                desc += $" until you're next able to go outside.\n\nYou currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
                 eb.WithColor(224, 33, 33);
             }
-            if (ClassSetups.usersDict[Context.User.Id].MothAmount != 1)
+            if (Info.usersDict[Context.User.Id].MothAmount != 1)
                 desc += "s.";
             else
                 desc += ".";
@@ -184,8 +184,8 @@ namespace MothBot
         private async Task BalanceAsync([Remainder()] string s = "")
         {
             var eb = new EmbedBuilder();
-            string title = $"You currently have {ClassSetups.usersDict[Context.User.Id].MothAmount} moth";
-            if (ClassSetups.usersDict[Context.User.Id].MothAmount != 1)
+            string title = $"You currently have {Info.usersDict[Context.User.Id].MothAmount} moth";
+            if (Info.usersDict[Context.User.Id].MothAmount != 1)
                 title += "s.";
             else
                 title += ".";
@@ -201,7 +201,7 @@ namespace MothBot
         {
             var user = (SocketGuildUser)Context.User;
             var mothCounts = new List<Tuple<ulong, SocketGuildUser>>();
-            foreach (var userData in ClassSetups.usersDict)
+            foreach (var userData in Info.usersDict)
             {
                 ulong userID = userData.Key;
                 var selectedUser = Context.Guild.GetUser(userID);
@@ -262,7 +262,7 @@ namespace MothBot
                     return;
                 }
             else
-                mothAmount = ClassSetups.usersDict[Context.User.Id].MothAmount;
+                mothAmount = Info.usersDict[Context.User.Id].MothAmount;
             if (mothAmount < 1)
             {
                 eb.WithColor(224, 33, 33);
@@ -270,7 +270,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            if (ClassSetups.usersDict[Context.User.Id].MothAmount < mothAmount)
+            if (Info.usersDict[Context.User.Id].MothAmount < mothAmount)
             {
                 eb.WithColor(224, 33, 33);
                 eb.WithDescription("You don't have that many moths!");
@@ -283,7 +283,7 @@ namespace MothBot
             int rv = rand.Next(0, 100);
             if (rv <= 50)
             {
-                ClassSetups.usersDict[Context.User.Id].MothAmount += mothAmount;
+                Info.usersDict[Context.User.Id].MothAmount += mothAmount;
                 title += $"You've won **{mothAmount}** moth";
                 eb.WithColor(72, 139, 48);
                 if (mothAmount != 1)
@@ -292,15 +292,15 @@ namespace MothBot
             }
             else
             {
-                ClassSetups.usersDict[Context.User.Id].MothAmount -= mothAmount;
+                Info.usersDict[Context.User.Id].MothAmount -= mothAmount;
                 eb.WithColor(224, 33, 33);
                 title += $"You've lost **{mothAmount}** moth";
                 if (mothAmount != 1)
                     title += "s";
                 title += ".";
             }
-            desc += $"You currently have **{ClassSetups.usersDict[Context.User.Id].MothAmount}** moth";
-            if (ClassSetups.usersDict[Context.User.Id].MothAmount != 1)
+            desc += $"You currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
+            if (Info.usersDict[Context.User.Id].MothAmount != 1)
                 desc += "s";
             desc += $".\n\n*Currently viewing {Context.User.Mention}*";
             eb.WithTitle(title);
@@ -330,7 +330,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            if (ClassSetups.usersDict[Context.User.Id].MothAmount < mothAmount)
+            if (Info.usersDict[Context.User.Id].MothAmount < mothAmount)
             {
                 eb.WithColor(224, 33, 33);
                 eb.WithDescription("You don't have that many moths!");
@@ -362,7 +362,7 @@ namespace MothBot
                 ULongArgument2 = mothAmount,
                 Purpose = "gift"
             };
-            ClassSetups.confirmations.Add(Context.User.Id, newConfirmation);
+            Info.confirmations.Add(Context.User.Id, newConfirmation);
             var childref = new ThreadStart(GiftConfirmSetup);
             Thread childThread = new Thread(childref);
             childThread.Start();
@@ -370,13 +370,13 @@ namespace MothBot
 
         private async void GiftConfirmSetup()
         {
-            var messageID = ClassSetups.confirmations[Context.User.Id].MessageID;
+            var messageID = Info.confirmations[Context.User.Id].MessageID;
             var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
             Thread.Sleep(10000);
-            if (ClassSetups.confirmations.ContainsKey(Context.User.Id) && ClassSetups.confirmations[Context.User.Id].MessageID == messageID)
+            if (Info.confirmations.ContainsKey(Context.User.Id) && Info.confirmations[Context.User.Id].MessageID == messageID)
             {
                 await Context.Channel.SendMessageAsync("Gifting cancelled!");
-                ClassSetups.confirmations.Remove(Context.User.Id);
+                Info.confirmations.Remove(Context.User.Id);
                 Func.disableButtons(message);
             }
         }
@@ -390,12 +390,12 @@ namespace MothBot
             eb.WithTitle("These are the items you currently have:");
             bool hasItems = false;
             string desc = "";
-            foreach (var itemDict in ClassSetups.usersDict[Context.User.Id].Items)
+            foreach (var itemDict in Info.usersDict[Context.User.Id].Items)
             {
                 if (itemDict.Value>0)
                 {
                     hasItems = true;
-                    desc += $"**{ClassSetups.itemsDict[itemDict.Key].Name}** - {itemDict.Value}\n{ClassSetups.itemsDict[itemDict.Key].ShortDesc}\n\n";
+                    desc += $"**{Info.itemsDict[itemDict.Key].Name}** - {itemDict.Value}\n{Info.itemsDict[itemDict.Key].ShortDesc}\n\n";
                 }
             }
             if (!hasItems)
@@ -415,11 +415,11 @@ namespace MothBot
             var title = "";
             if (page == 0)
             {
-                title += $"Moth Store - {ClassSetups.usersDict[Context.User.Id].MothAmount} moth";
-                if (ClassSetups.usersDict[Context.User.Id].MothAmount != 1)
+                title += $"Moth Store - {Info.usersDict[Context.User.Id].MothAmount} moth";
+                if (Info.usersDict[Context.User.Id].MothAmount != 1)
                     title += "s";
                 desc += "Use `m!shop <page>` to view the items in the page.";
-                foreach (var pageDesc in ClassSetups.storePagesDict)
+                foreach (var pageDesc in Info.storePagesDict)
                 {
                     ulong pageID = pageDesc.Key;
                     var pageInfo = pageDesc.Value;
@@ -427,21 +427,21 @@ namespace MothBot
                 }
                 eb.WithTitle(title);
             }
-            else if (!ClassSetups.storePagesDict.ContainsKey(page))
+            else if (!Info.storePagesDict.ContainsKey(page))
             {
                 desc = "This page doesn't exist!";
             }
             else
             {
-                title += $"Moth Store - {ClassSetups.usersDict[Context.User.Id].MothAmount} moth";
-                if (ClassSetups.usersDict[Context.User.Id].MothAmount != 1)
+                title += $"Moth Store - {Info.usersDict[Context.User.Id].MothAmount} moth";
+                if (Info.usersDict[Context.User.Id].MothAmount != 1)
                     title += "s";
                 eb.WithTitle(title);
                 desc += "To buy an item, use `m!buy <item>`";
-                foreach (string item in ClassSetups.storePagesDict[page].Items)
+                foreach (string item in Info.storePagesDict[page].Items)
                 {
-                    var itemInfo = ClassSetups.itemsDict[item];
-                    var price = EconomyFunc.calcItemPrice(itemInfo, ClassSetups.usersDict[Context.User.Id].MothAmount);
+                    var itemInfo = Info.itemsDict[item];
+                    var price = EconomyFunc.calcItemPrice(itemInfo, Info.usersDict[Context.User.Id].MothAmount);
                     desc += $"\n\n**{itemInfo.Name} - {price} moths**\n{itemInfo.ShortDesc}";
                 }
             }

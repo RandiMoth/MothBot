@@ -33,7 +33,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            if (ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(timer => timer.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase)))
+            if (Info.guildsDict[Context.Guild.Id].Timers.Any(timer => timer.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase)))
             {
                 eb.WithDescription("A timer with this name already exists in this server.");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
@@ -43,7 +43,7 @@ namespace MothBot
             eb.WithColor(51, 127, 213);
             eb.WithDescription($"The timer \"{inputs[1]}\" is set to fire <t:{thisTime + (ulong)seconds}:R>.");
             Timer timer = new Timer() { Channel = Context.Channel.Id, Name = inputs[1], Text = inputs[inputs.Count - 1], TimeToFire = thisTime + (ulong)seconds, User = Context.User.Id, OriginalDuration = (int)seconds, Active = seconds < 60 };
-            ClassSetups.guildsDict[Context.Guild.Id].Timers.Add(timer);
+            Info.guildsDict[Context.Guild.Id].Timers.Add(timer);
             await Context.Channel.SendMessageAsync("", embed: eb.Build());
             if (timer.Active)
             {
@@ -58,7 +58,7 @@ namespace MothBot
         {
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
-            var timers = ClassSetups.guildsDict[Context.Guild.Id].Timers.Where(timer => timer.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            var timers = Info.guildsDict[Context.Guild.Id].Timers.Where(timer => timer.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
             if (timers.Count() == 0)
             {
                 eb.WithDescription("Couldn't find the timer with the specified name");
@@ -92,14 +92,14 @@ namespace MothBot
             }
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
-            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            var index = Info.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
             if (index == -1)
             {
                 eb.WithDescription("Couldn't find the timer with the specified name");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            var timer = Info.guildsDict[Context.Guild.Id].Timers[index];
             if (timer.Paused)
             {
                 eb.WithDescription("This timer is already paused!");
@@ -112,10 +112,10 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Paused = true;
-            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            Info.guildsDict[Context.Guild.Id].Timers[index].Paused = true;
+            Info.guildsDict[Context.Guild.Id].Timers[index].Active = false;
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime = (int)(timer.TimeToFire - thisTime);
+            Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime = (int)(timer.TimeToFire - thisTime);
             eb.WithColor(51, 127, 213);
             eb.WithDescription($"The timer \"{timer.Name}\" has been paused. If unpaused, it will end in {Func.convertSeconds(timer.TimeToFire - thisTime)}.");
             await Context.Channel.SendMessageAsync("", false, eb.Build());
@@ -130,14 +130,14 @@ namespace MothBot
             var user = Context.User;
             if (userTarget != null && Context.User.Id == 491998313399189504)
                 user = userTarget;
-            if (!ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id && !t.Paused))
+            if (!Info.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id && !t.Paused))
             {
                 eb.WithDescription("You don't have any unpaused timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            ClassSetups.guildsDict[Context.Guild.Id].Timers.ForEach(t =>
+            Info.guildsDict[Context.Guild.Id].Timers.ForEach(t =>
             {
                 if (t.User == user.Id && !t.Paused)
                 {
@@ -162,14 +162,14 @@ namespace MothBot
             }
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
-            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            var index = Info.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
             if (index == -1)
             {
                 eb.WithDescription("Couldn't find the timer with the specified name");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            var timer = Info.guildsDict[Context.Guild.Id].Timers[index];
             if (!timer.Paused)
             {
                 eb.WithDescription("This timer is already unpaused!");
@@ -182,14 +182,14 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Paused = false;
+            Info.guildsDict[Context.Guild.Id].Timers[index].Paused = false;
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire = thisTime + (ulong)timer.RemainingTime;
+            Info.guildsDict[Context.Guild.Id].Timers[index].TimeToFire = thisTime + (ulong)timer.RemainingTime;
             eb.WithColor(51, 127, 213);
             eb.WithDescription($"The timer \"{timer.Name}\" has been unpaused and scheduled to fire <t:{thisTime + (ulong)timer.RemainingTime}:R>.");
             if (timer.RemainingTime < 60)
             {
-                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = true;
+                Info.guildsDict[Context.Guild.Id].Timers[index].Active = true;
                 Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: timer.RemainingTime));
                 childThread.Start();
             }
@@ -205,14 +205,14 @@ namespace MothBot
             var user = Context.User;
             if (userTarget != null && Context.User.Id == 491998313399189504)
                 user = userTarget;
-            if (!ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id && t.Paused))
+            if (!Info.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id && t.Paused))
             {
                 eb.WithDescription("You don't have any paused timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            ClassSetups.guildsDict[Context.Guild.Id].Timers.ForEach(t =>
+            Info.guildsDict[Context.Guild.Id].Timers.ForEach(t =>
             {
                 if (t.User == user.Id && t.Paused)
                 {
@@ -243,21 +243,21 @@ namespace MothBot
             }
             var eb = new EmbedBuilder();
             eb.WithColor(244, 178, 23);
-            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
+            var index = Info.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(timerName, StringComparison.OrdinalIgnoreCase));
             if (index == -1)
             {
                 eb.WithDescription("Couldn't find the timer with the specified name");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            var timer = Info.guildsDict[Context.Guild.Id].Timers[index];
             if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
             {
                 eb.WithDescription("You can't delete other people's timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            ClassSetups.guildsDict[Context.Guild.Id].Timers.RemoveAt(index);
+            Info.guildsDict[Context.Guild.Id].Timers.RemoveAt(index);
             eb.WithColor(51, 127, 213);
             eb.WithDescription($"The timer \"{timer.Name}\" has been deleted.");
             await Context.Channel.SendMessageAsync("", false, eb.Build());
@@ -272,14 +272,14 @@ namespace MothBot
             var user = Context.User;
             if (userTarget != null && Context.User.Id == 491998313399189504)
                 user = userTarget;
-            if (!ClassSetups.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id))
+            if (!Info.guildsDict[Context.Guild.Id].Timers.Any(t => t.User == user.Id))
             {
                 eb.WithDescription("You don't have any timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            ClassSetups.guildsDict[Context.Guild.Id].Timers.RemoveAll(t => t.User == user.Id);
+            Info.guildsDict[Context.Guild.Id].Timers.RemoveAll(t => t.User == user.Id);
             eb.WithColor(51, 127, 213);
             eb.WithDescription($"All of your timers have been deleted.");
             await Context.Channel.SendMessageAsync("", false, eb.Build());
@@ -292,7 +292,7 @@ namespace MothBot
             var eb = new EmbedBuilder();
             if (user == null)
                 user = (SocketGuildUser)Context.User;
-            var timers = ClassSetups.guildsDict[Context.Guild.Id].Timers.Where(t => t.User == user.Id);
+            var timers = Info.guildsDict[Context.Guild.Id].Timers.Where(t => t.User == user.Id);
             eb.WithColor(51, 127, 213);
             if (timers.Count() == 0)
                 eb.WithDescription("No timers have been found");
@@ -337,31 +337,31 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase));
+            var index = Info.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase));
             if (index == -1)
             {
                 eb.WithDescription("Couldn't find the timer with the specified name");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            var timer = Info.guildsDict[Context.Guild.Id].Timers[index];
             if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
             {
                 eb.WithDescription("You can't extend other people's timers!");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            Info.guildsDict[Context.Guild.Id].Timers[index].Active = false;
             var txt = $"The timer \"{timer.Name}\" has been extended. ";
             if (timer.Paused)
             {
-                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime += (int)time;
-                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
+                Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime += (int)time;
+                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
             }
             else
             {
-                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire += (ulong)time;
-                txt += $"It will end <t:{ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire}:R>";
+                Info.guildsDict[Context.Guild.Id].Timers[index].TimeToFire += (ulong)time;
+                txt += $"It will end <t:{Info.guildsDict[Context.Guild.Id].Timers[index].TimeToFire}:R>";
             }
             eb.WithColor(51, 127, 213);
             eb.WithDescription(txt);
@@ -369,7 +369,7 @@ namespace MothBot
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
             if (!timer.Paused && (int)(timer.TimeToFire - thisTime) < 60)
             {
-                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = true;
+                Info.guildsDict[Context.Guild.Id].Timers[index].Active = true;
                 Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: (int)(timer.TimeToFire - thisTime) + (int)time));
                 childThread.Start();
             }
@@ -395,14 +395,14 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var index = ClassSetups.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase));
+            var index = Info.guildsDict[Context.Guild.Id].Timers.FindIndex(t => t.Name.Equals(inputs[1], StringComparison.OrdinalIgnoreCase));
             if (index == -1)
             {
                 eb.WithDescription("Couldn't find the timer with the specified name");
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var timer = ClassSetups.guildsDict[Context.Guild.Id].Timers[index];
+            var timer = Info.guildsDict[Context.Guild.Id].Timers[index];
             if (timer.User != Context.User.Id && Context.User.Id != 491998313399189504)
             {
                 eb.WithDescription("You can't shorten other people's timers!");
@@ -417,17 +417,17 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            Info.guildsDict[Context.Guild.Id].Timers[index].Active = false;
             var txt = $"The timer \"{timer.Name}\" has been shortened. ";
             if (timer.Paused)
             {
-                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime -= (int)time;
-                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)ClassSetups.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
+                Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime -= (int)time;
+                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
             }
             else
             {
-                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire -= (ulong)time;
-                txt += $"It will end <t:{ClassSetups.guildsDict[Context.Guild.Id].Timers[index].TimeToFire}:R>";
+                Info.guildsDict[Context.Guild.Id].Timers[index].TimeToFire -= (ulong)time;
+                txt += $"It will end <t:{Info.guildsDict[Context.Guild.Id].Timers[index].TimeToFire}:R>";
             }
             eb.WithColor(51, 127, 213);
             eb.WithDescription(txt);
@@ -435,7 +435,7 @@ namespace MothBot
             //Console.WriteLine($"Time to fire: {timer.TimeToFire}; This time: {thisTime}; Time to change: {time}");
             if (!timer.Paused && (int)(timer.TimeToFire - thisTime) < 60)
             {
-                ClassSetups.guildsDict[Context.Guild.Id].Timers[index].Active = true;
+                Info.guildsDict[Context.Guild.Id].Timers[index].Active = true;
                 Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: (int)(timer.TimeToFire - thisTime) - (int)time));
                 childThread.Start();
             }

@@ -32,20 +32,20 @@ namespace MothBot
             }
             eb.WithTitle(itemInfo.Name);
             desc += itemInfo.LongDesc;
-            desc += $"\n\nFull price: {EconomyFunc.calcItemPrice(itemInfo, ClassSetups.usersDict[Context.User.Id].MothAmount)}\n**Price breakdown**:\n­ ­ ­ ­ Base price: {itemInfo.Price.BasePrice}\n";
+            desc += $"\n\nFull price: {EconomyFunc.calcItemPrice(itemInfo, Info.usersDict[Context.User.Id].MothAmount)}\n**Price breakdown**:\n­ ­ ­ ­ Base price: {itemInfo.Price.BasePrice}\n";
             if (itemInfo.Price.PricePortion != 0)
-                desc += $"­ ­ ­ ­ {itemInfo.Price.PricePortion * 100}% total moth amount: {(ulong)Math.Ceiling(itemInfo.Price.PricePortion * ClassSetups.usersDict[Context.User.Id].MothAmount)}\n";
-            desc += $"­ ­ ­ ­ {itemInfo.Price.Tax * 100}% tax: {EconomyFunc.calcTaxPrice(itemInfo.Price.Tax, ClassSetups.usersDict[Context.User.Id].MothAmount, itemInfo.Price.BasePrice * 3)}\n";
+                desc += $"­ ­ ­ ­ {itemInfo.Price.PricePortion * 100}% total moth amount: {(ulong)Math.Ceiling(itemInfo.Price.PricePortion * Info.usersDict[Context.User.Id].MothAmount)}\n";
+            desc += $"­ ­ ­ ­ {itemInfo.Price.Tax * 100}% tax: {EconomyFunc.calcTaxPrice(itemInfo.Price.Tax, Info.usersDict[Context.User.Id].MothAmount, itemInfo.Price.BasePrice * 3)}\n";
             if (itemInfo.Cooldown != 0)
                 desc += $"\nThis item can only be purchased once every {Func.convertSeconds(itemInfo.Cooldown)}.\n";
             if (itemInfo.Max != 0)
                 desc += $"\nYou cannot have more than {itemInfo.Max} of this item.\n";
-            desc += $"\nYou currently have {ClassSetups.usersDict[Context.User.Id].MothAmount} moth";
-            if (ClassSetups.usersDict[Context.User.Id].MothAmount != 0)
+            desc += $"\nYou currently have {Info.usersDict[Context.User.Id].MothAmount} moth";
+            if (Info.usersDict[Context.User.Id].MothAmount != 0)
                 desc += "s and ";
             try
             {
-                desc += $"{ClassSetups.usersDict[Context.User.Id].Items[itemInfo.Id]}";
+                desc += $"{Info.usersDict[Context.User.Id].Items[itemInfo.Id]}";
             }
             catch (KeyNotFoundException)
             {
@@ -73,8 +73,8 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            var price = EconomyFunc.calcItemPrice(itemInfo, ClassSetups.usersDict[Context.User.Id].MothAmount);
-            if (price > ClassSetups.usersDict[Context.User.Id].MothAmount)
+            var price = EconomyFunc.calcItemPrice(itemInfo, Info.usersDict[Context.User.Id].MothAmount);
+            if (price > Info.usersDict[Context.User.Id].MothAmount)
             {
                 eb.WithColor(224, 33, 33);
                 eb.WithDescription("You don't have that many moths!");
@@ -85,7 +85,7 @@ namespace MothBot
             {
                 try
                 {
-                    var itemCount = ClassSetups.usersDict[Context.User.Id].Items[itemInfo.Id];
+                    var itemCount = Info.usersDict[Context.User.Id].Items[itemInfo.Id];
                     if (itemCount >= itemInfo.Max)
                     {
                         eb.WithColor(224, 33, 33);
@@ -96,14 +96,14 @@ namespace MothBot
                 }
                 catch (KeyNotFoundException)
                 {
-                    ClassSetups.usersDict[Context.User.Id].Items.Add(itemInfo.Id, 0);
+                    Info.usersDict[Context.User.Id].Items.Add(itemInfo.Id, 0);
                 }
             }
             if (itemInfo.Cooldown > 0)
             {
                 try
                 {
-                    var lastTime = ClassSetups.usersDict[Context.User.Id].LastTimes.Item[itemInfo.Id];
+                    var lastTime = Info.usersDict[Context.User.Id].LastTimes.Item[itemInfo.Id];
                     ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
                     if (thisTime - lastTime < itemInfo.Cooldown)
                     {
@@ -115,7 +115,7 @@ namespace MothBot
                 }
                 catch (KeyNotFoundException)
                 {
-                    ClassSetups.usersDict[Context.User.Id].LastTimes.Item.Add(itemInfo.Id, 0);
+                    Info.usersDict[Context.User.Id].LastTimes.Item.Add(itemInfo.Id, 0);
                 }
             }
             desc = $"Are you sure you want to purchase {itemInfo.Name} for {price} moth";
@@ -133,11 +133,11 @@ namespace MothBot
                 ChannelID = Context.Channel.Id,
                 GuildID = Context.Guild.Id,
                 ULongArgument1 = price,
-                ULongArgument2 = EconomyFunc.calcTaxPrice(itemInfo.Price.Tax, ClassSetups.usersDict[Context.User.Id].MothAmount, itemInfo.Price.BasePrice * 3),
+                ULongArgument2 = EconomyFunc.calcTaxPrice(itemInfo.Price.Tax, Info.usersDict[Context.User.Id].MothAmount, itemInfo.Price.BasePrice * 3),
                 ItemArgument1 = itemInfo,
                 Purpose = "buyItem"
             };
-            ClassSetups.confirmations.Add(Context.User.Id, newConfirmation);
+            Info.confirmations.Add(Context.User.Id, newConfirmation);
             var childref = new ThreadStart(ItemConfirmSetup);
             Thread childThread = new Thread(childref);
             childThread.Start();
@@ -145,13 +145,13 @@ namespace MothBot
 
         private async void ItemConfirmSetup()
         {
-            var messageID = ClassSetups.confirmations[Context.User.Id].MessageID;
+            var messageID = Info.confirmations[Context.User.Id].MessageID;
             var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
             Thread.Sleep(10000);
-            if (ClassSetups.confirmations.ContainsKey(Context.User.Id) && ClassSetups.confirmations[Context.User.Id].MessageID == messageID)
+            if (Info.confirmations.ContainsKey(Context.User.Id) && Info.confirmations[Context.User.Id].MessageID == messageID)
             {
                 await Context.Channel.SendMessageAsync("Item purchase cancelled!");
-                ClassSetups.confirmations.Remove(Context.User.Id);
+                Info.confirmations.Remove(Context.User.Id);
                 Func.disableButtons(message);
             }
         }
@@ -162,7 +162,7 @@ namespace MothBot
             var eb = new EmbedBuilder();
             try
             {
-                if (ClassSetups.usersDict[Context.User.Id].Items["muteitem"]==0)
+                if (Info.usersDict[Context.User.Id].Items["muteitem"]==0)
                 {
                     eb.WithDescription("You don't have enough mutes!");
                     eb.WithColor(224, 33, 33);
@@ -177,7 +177,7 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            var muteRole = Context.Guild.GetRole(ClassSetups.guildsDict[Context.Guild.Id].MuteRole);
+            var muteRole = Context.Guild.GetRole(Info.guildsDict[Context.Guild.Id].MuteRole);
             if (muteRole == null)
             {
                 eb.WithDescription("Couldn't find a role to mute. Please ask the mods to assign it with `m!muterole`.");
@@ -220,7 +220,7 @@ namespace MothBot
                 ULongArgument1 = user.Id,
                 Purpose = "muteUser"
             };
-            ClassSetups.confirmations.Add(Context.User.Id, newConfirmation);
+            Info.confirmations.Add(Context.User.Id, newConfirmation);
             var childref = new ThreadStart(MuteConfirmSetup);
             Thread childThread = new Thread(childref);
             childThread.Start();
@@ -239,13 +239,13 @@ namespace MothBot
 
         private async void MuteConfirmSetup()
         {
-            var messageID = ClassSetups.confirmations[Context.User.Id].MessageID;
+            var messageID = Info.confirmations[Context.User.Id].MessageID;
             var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
             Thread.Sleep(10000);
-            if (ClassSetups.confirmations.ContainsKey(Context.User.Id) && ClassSetups.confirmations[Context.User.Id].MessageID == messageID)
+            if (Info.confirmations.ContainsKey(Context.User.Id) && Info.confirmations[Context.User.Id].MessageID == messageID)
             {
                 await Context.Channel.SendMessageAsync("Muting cancelled!");
-                ClassSetups.confirmations.Remove(Context.User.Id);
+                Info.confirmations.Remove(Context.User.Id);
                 Func.disableButtons(message);
             }
         }
