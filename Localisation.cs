@@ -93,6 +93,11 @@ namespace MothBot
                 case '1':
                     result = Context1;
                     break;
+                case 'f':
+                    result = user.Username;
+                    if (user.DiscriminatorValue != 0)
+                        result += $"#{user.Discriminator}";
+                    break;
                 default:
                     result = "ERROR: invalid variable %" + c;
                     break;

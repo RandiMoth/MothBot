@@ -14,6 +14,15 @@ NickSuccess: Nickname change successful!
 RoleUnassigned: You are not assigned this role.
 RoleColourChange: The colour of $MENTION|ROLE|/1$ has been changed!
 
+PollOptionsError: Make sure that the poll includes a title and between 2 and 10 options, inclusionary.
+PollEmojiPerOption: The amount of provided emojis doesn't correspond with the amount of options.
+FailFindEmoji: Couldn't detect any emoji in the string "/1".
+PollTimeout: A poll was already posted in the last minute. To prevent spam, this has been restricted.
+PollUserTimeout: A poll was already made by you in the last 5 hours. To prevent spam, this has been restricted.
+PollFooter: This poll has been created by /f
+PollSuccess: The poll has been sent.
+PollMessage: Discuss this poll in the thread, such as why you've picked an option. If the poll has an "Other" option, you can say what you've picked that doesn't fall in the options.
+
 NoEmoji: Couldn't find the emoji!
 NoServer: Couldn't find the server!
 NoChannel: Couldn't find the channel!

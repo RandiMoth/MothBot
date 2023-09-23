@@ -89,9 +89,11 @@ namespace MothBot
             {
                 Console.WriteLine("Bot is connected!");
                 await _client.SetGameAsync("Creepy Castle");
+#if !DEBUG
                 var guild = _client.GetGuild(608912123317321738);
                 var channel = (ISocketMessageChannel)guild.GetChannel(935420527051419688);
                 await channel.SendMessageAsync("MothBot is now online.");
+#endif
                 Thread childThread = new Thread(() => CheckTimers());
                 childThread.Start();
                 return;

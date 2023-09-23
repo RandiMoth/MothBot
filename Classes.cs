@@ -251,6 +251,12 @@ namespace MothBot
             await user.SendMessageAsync($"Your mute on {guild.Name} has run out.");
         }
     }
+    public struct Emoteji // A combination of the two
+    {
+        public Emoji? Emoji { get; set; }
+        public Emote? Emote { get; set; }
+    }
+
     public static class Info
     {
         public static Dictionary<string, ulong> emojisDict = new Dictionary<string, ulong>();
