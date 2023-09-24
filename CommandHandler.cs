@@ -603,16 +603,22 @@ namespace MothBot
             emojiName = emojiName.Trim();
             emojiName = Func.ConvertEmojis(emojiName);
             Console.WriteLine(emojiName);
-            Emote? emoji;
+            Emoteji emoji = new Emoteji();
             try
             {
-                emoji = Emote.Parse(emojiName);
+                emoji.Emote = Emote.Parse(emojiName);
             }
             catch (ArgumentException)
             {
-                emoji = null;
+                try
+                {
+                    emoji.Emoji = Emoji.Parse(emojiName);
+                }
+                catch (ArgumentException)
+                {
+                }
             }
-            if (emoji == null)
+            if (emoji.Emoji == null && emoji.Emote == null)
             {
                 eb.WithDescription(Localisation.GetLoc("NoEmoji", Info.GetUser(Context.User.Id).Language));
                 eb.WithColor(224, 33, 33);
@@ -644,7 +650,11 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
-            var result = message.AddReactionAsync(emoji);
+            Task? result;
+            if (emoji.Emoji == null)
+                result = message.AddReactionAsync(emoji.Emote);
+            else
+                result = message.AddReactionAsync(emoji.Emoji);
             result.Wait();
             if (!result.IsCompleted)
             {
