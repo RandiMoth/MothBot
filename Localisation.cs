@@ -9,18 +9,27 @@ namespace MothBot
 {
     public class Localisation
     {
-        private enum f_states { NORMAL, VARIABLE, FUNCTION, ESCAPE_CHAR }
+        private enum f_states { NORMAL, VARIABLE, FUNCTION, ESCAPE_CHAR, ESCAPE_CHAR_FUNC }
+        private class TextContext
+        {
+            public SocketGuildUser? User { get; set; } = null;
+            public List<string> Strings { get; set; } = new List<string>();
+        }
         public static string GetLoc(string key, Language language = Language.L_ENGLISH, SocketGuildUser? user = null, string Context1 = "")
         {
+            string value;
             switch (language)
             { 
                 case Language.L_ENGLISH:
-                    return parseText(Info.englishDict[key], user, Context1);
+                    value = Info.englishDict[key];
+                    break;
                 default:
                     return "UNKNOWN LANGUAGE, SHOULD NEVER HAPPEN";
             }
+            TextContext Context = new TextContext() { User = user, Strings = new List<string>() { Context1 } }; 
+            return parseText(value, Context);
         }
-        private static string parseText(string str, SocketGuildUser? user = null, string Context1 = "")
+        private static string parseText(string str, TextContext Context)
         {
             //Console.WriteLine(str);
             f_states state = f_states.NORMAL;
@@ -51,52 +60,58 @@ namespace MothBot
                         }
                         break;
                     case f_states.VARIABLE:
-                        result += getVar(c, user, Context1);
+                        result += getVar(c, Context);
                         state = f_states.NORMAL;
+                        break;
+                    case f_states.ESCAPE_CHAR:
+                        state = f_states.NORMAL;
+                        result += c;
                         break;
                     case f_states.FUNCTION:
                         switch (c)
                         {
                             case '$':
                                 state = f_states.NORMAL;
-                                result += parseTextFunction(args, user, Context1);
+                                result += parseTextFunction(args, Context);
                                 break;
                             case '|':
                                 args.Add("");
                                 i += 1;
+                                break;
+                            case '\\':
+                                state = f_states.ESCAPE_CHAR_FUNC;
                                 break;
                             default:
                                 args[i] += c;
                                 break;
                         }
                         break;
-                    case f_states.ESCAPE_CHAR:
-                        state = f_states.NORMAL;
+                    case f_states.ESCAPE_CHAR_FUNC:
+                        state = f_states.FUNCTION;
                         result += c;
                         break;
                 }
             }
             return result;
         }
-        private static string getVar(char c, SocketGuildUser? user = null, string Context1 = "")
+        private static string getVar(char c, TextContext Context)
         {
             string result;
             switch (c)
             {
                 case 'm':
-                    
-                    result = Info.usersDict[user.Id].MothAmount.ToString();
+                    result = Info.usersDict[Context.User.Id].MothAmount.ToString();
                     break;
                 case 'n':
-                    result = user.Nickname ?? user.DisplayName;
+                    result = Context.User.Nickname ?? Context.User.DisplayName;
                     break;
                 case '1':
-                    result = Context1;
+                    result = Context.Strings[0];
                     break;
                 case 'f':
-                    result = user.Username;
-                    if (user.DiscriminatorValue != 0)
-                        result += $"#{user.Discriminator}";
+                    result = Context.User.Username;
+                    if (Context.User.DiscriminatorValue != 0)
+                        result += $"#{Context.User.Discriminator}";
                     break;
                 default:
                     result = "ERROR: invalid variable %" + c;
@@ -104,22 +119,23 @@ namespace MothBot
             }
             return result;
         }
-        private static string parseTextFunction(List<string> input, SocketGuildUser? user = null, string Context1 = "")
+        private static string parseTextFunction(List<string> input, TextContext Context)
         {
+            input.ForEach(s => s = parseText(s, Context));
             switch (input[0])
             {
                 case "PLURAL":
-                    long check = Convert.ToInt64(parseText(input[1], user));
+                    long check = Convert.ToInt64(parseText(input[1], Context));
                     if (check == 1 || check == -1)
-                        return parseText(input[2], user);
-                    return parseText(input[3], user);
+                        return parseText(input[2], Context);
+                    return parseText(input[3], Context);
                 case "MENTION":
                     switch (input[1])
                     {
                         case "ROLE":
-                            return $"<@&{parseText(input[2], user, Context1)}>";
+                            return $"<@&{parseText(input[2], Context)}>";
                         case "USER":
-                            return $"<@{parseText(input[2], user, Context1)}>";
+                            return $"<@{parseText(input[2], Context)}>";
                         default:
                             return "ERROR: invalid mention type: " + input[1];
                     }

@@ -37,6 +37,7 @@ namespace MothBot
         public ulong Id { get; set; }
         public ulong Guild { get; set; }
     }
+#if !DEBUG
     public class Guild
     {
         public Dictionary<ulong, List<ulong>> AssignedRoles { get; set; } = new Dictionary<ulong, List<ulong>>();
@@ -56,6 +57,7 @@ namespace MothBot
         public ulong LastPoll { get; set; } = 0;
         public List<Timer> Timers { get; set; } = new List<Timer>();
     }
+#endif
     public class Timer
     {
         public string Name { get; set; } = string.Empty;
@@ -68,6 +70,7 @@ namespace MothBot
         public int RemainingTime { get; set; } = 0;
         public int OriginalDuration { get; set; } = 0;
     }
+#if !DEBUG
     public class User
     {
         public ulong MothAmount { get; set; } = 0;
@@ -75,6 +78,7 @@ namespace MothBot
         public Language Language { get; set; } = Language.L_ENGLISH;
         public Dictionary<string, ulong> Items = new Dictionary<string, ulong>();
     }
+#endif
     public class Confirmation
     {
         public ulong GuildID { get; set; }      //The guild the confirmation is in
@@ -329,6 +333,9 @@ namespace MothBot
             File.Delete(folder + $"user_info_{period}.yaml");
             File.Move(folder + "user_info.yaml", folder + $"user_info_{period}.yaml");
             File.Move(folder + "user_info_temp.yaml", folder + "user_info.yaml");
+#if DEBUG
+            Secret.Backup(folder);
+#endif
             return true;
         }
         private static async void CreateBackupTimer()

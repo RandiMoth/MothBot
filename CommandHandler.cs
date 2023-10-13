@@ -1255,16 +1255,6 @@ namespace MothBot
             eb.WithDescription($"Messaged user {user.Username}#{user.Discriminator}");
             await ReplyAsync("", false, eb.Build());
         }
-        [Command("EnglishCheck")]
-        [Summary(".")]
-        private async Task englishAsync([Remainder()] string message = " ")
-        {
-            foreach (KeyValuePair<string, string> entry in Info.englishDict)
-            {
-                Console.WriteLine(entry.Key + "\n" + entry.Value);
-            }
-            ReplyAsync("Printed to console");
-        }
     }
     [Name("Admin commands")]
     [Summary("Commands that require moderator permissions")]

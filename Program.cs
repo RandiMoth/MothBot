@@ -66,6 +66,9 @@ namespace MothBot
         {
             //Console.WriteLine(RuntimeInformation.FrameworkDescription);
             Info.setUpDicts();
+#if DEBUG
+            Secret.Setup();
+#endif
             var _config = new DiscordSocketConfig { MessageCacheSize = 100, GatewayIntents = GatewayIntents.All, AlwaysDownloadUsers = true };
             _client = new DiscordSocketClient(_config);
             _client.MessageReceived += HandleCommandAsync;
@@ -73,7 +76,11 @@ namespace MothBot
             //_commands.AddTypeReader(typeof(int), new IntegerTypeReader());
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
             _client.Log += Log;
+#if DEBUG
+            var token = Environment.GetEnvironmentVariable("DEBUG_MOTHBOT_TOKEN",EnvironmentVariableTarget.User);
+#else
             var token = Environment.GetEnvironmentVariable("MOTHBOT_TOKEN",EnvironmentVariableTarget.User);
+#endif
 
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
