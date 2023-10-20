@@ -68,14 +68,14 @@ namespace MothBot
             var timer = timers.First();
             eb.WithColor(51, 127, 213);
             eb.WithTitle(timer.Name);
-            string txt = timer.Text + $"\nTimer for {Func.convertSeconds((ulong)timer.OriginalDuration)}.\n\n";
+            string txt = timer.Text + Localisation.GetLoc("TimerFor", Info.usersDict[Context.User.Id].Language);
             if (timer.Paused)
             {
-                txt += $"*This timer is currently paused*. If unpaused right now, it would end in {Func.convertSeconds((ulong)timer.RemainingTime)}.";
+                txt += Localisation.GetLoc("TimerPaused", Info.usersDict[Context.User.Id].Language, number:(ulong)timer.RemainingTime);
             }
             else
             {
-                txt += $"This timer is currently active and will end <t:{timer.TimeToFire}:R>.";
+                txt += Localisation.GetLoc("TimerActive", Info.usersDict[Context.User.Id].Language, number: timer.TimeToFire);
             }
             eb.WithDescription(txt);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
@@ -112,12 +112,12 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            Info.guildsDict[Context.Guild.Id].Timers[index].Paused = true;
-            Info.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            timer.Paused = true;
+            timer.Active = false;
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
-            Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime = (int)(timer.TimeToFire - thisTime);
+            timer.RemainingTime = (int)(timer.TimeToFire - thisTime);
             eb.WithColor(51, 127, 213);
-            eb.WithDescription($"The timer \"{timer.Name}\" has been paused. If unpaused, it will end in {Func.convertSeconds(timer.TimeToFire - thisTime)}.");
+            eb.WithDescription(Localisation.GetLoc("TimerActive", Info.usersDict[Context.User.Id].Language, number: (ulong)timer.RemainingTime, Context1:timer.Name));
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("timerpauseall")]
@@ -305,7 +305,7 @@ namespace MothBot
                     if (timer.Text != timer.Name)
                         txt += $"\n{timer.Text}";
                     if (timer.Paused)
-                        txt += $"\nCurrently paused, with {Func.convertSeconds((ulong)timer.RemainingTime)} remaining.";
+                        txt += Localisation.GetLoc("TimerRemaining", Info.usersDict[Context.User.Id].Language, number: (ulong)timer.RemainingTime);
                     else
                         txt += $"\nCurrently active, to end <t:{timer.TimeToFire}:R>.";
                     txt += "\n\n";
@@ -355,8 +355,8 @@ namespace MothBot
             var txt = $"The timer \"{timer.Name}\" has been extended. ";
             if (timer.Paused)
             {
-                Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime += (int)time;
-                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
+                timer.RemainingTime += (int)time;
+                txt += Localisation.GetLoc("TimerExtendedUnpaused", Info.usersDict[Context.User.Id].Language, number: (ulong)timer.RemainingTime);
             }
             else
             {
@@ -417,17 +417,17 @@ namespace MothBot
                 await Context.Channel.SendMessageAsync("", embed: eb.Build());
                 return;
             }
-            Info.guildsDict[Context.Guild.Id].Timers[index].Active = false;
+            timer.Active = false;
             var txt = $"The timer \"{timer.Name}\" has been shortened. ";
             if (timer.Paused)
             {
-                Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime -= (int)time;
-                txt += $"If unpaused, it will end in {Func.convertSeconds((ulong)Info.guildsDict[Context.Guild.Id].Timers[index].RemainingTime)}";
+                timer.RemainingTime -= (int)time;
+                txt += Localisation.GetLoc("TimerExtendedUnpaused", Info.usersDict[Context.User.Id].Language, number: (ulong)timer.RemainingTime);
             }
             else
             {
-                Info.guildsDict[Context.Guild.Id].Timers[index].TimeToFire -= (ulong)time;
-                txt += $"It will end <t:{Info.guildsDict[Context.Guild.Id].Timers[index].TimeToFire}:R>";
+                timer.TimeToFire -= (ulong)time;
+                txt += $"It will end <t:{timer.TimeToFire}:R>";
             }
             eb.WithColor(51, 127, 213);
             eb.WithDescription(txt);
@@ -435,7 +435,7 @@ namespace MothBot
             //Console.WriteLine($"Time to fire: {timer.TimeToFire}; This time: {thisTime}; Time to change: {time}");
             if (!timer.Paused && (int)(timer.TimeToFire - thisTime) < 60)
             {
-                Info.guildsDict[Context.Guild.Id].Timers[index].Active = true;
+                timer.Active = true;
                 Thread childThread = new Thread(() => Func.MakeReminderAsync(timer, Context.Guild, delay: (int)(timer.TimeToFire - thisTime) - (int)time));
                 childThread.Start();
             }

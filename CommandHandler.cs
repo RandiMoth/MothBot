@@ -40,55 +40,6 @@ namespace MothBot
             }
             return g.GetRole(roleID);
         }
-        public static string convertSeconds(ulong secs)
-        {
-            ulong days = secs / 86400;
-            ulong hours = (secs / 3600) % 24;
-            ulong mins = (secs / 60) % 60;
-            secs = secs % 60;
-            string res = "";
-            ulong lcount = Math.Min(1, hours) + Math.Min(1, mins) + Math.Min(1, secs);
-            ulong fcount = Math.Min(1, hours) + Math.Min(1, mins) + Math.Min(1, days);
-            if (days > 0)
-            {
-                res += $"{days} day";
-                if (days != 1)
-                    res += "s";
-                if (lcount > 1)
-                    res += ", ";
-                else if (lcount == 1)
-                    res += " and ";
-            }
-            if (hours > 0)
-            {
-                res += $"{hours} hour";
-                if (hours != 1)
-                    res += "s";
-                if (mins > 0 && secs > 0)
-                    res += ", ";
-                else if (days > 0 &&(mins > 0 || secs > 0))
-                    res += ", and ";
-                else if (mins > 0 || secs > 0)
-                    res += " and ";
-            }
-            if (mins > 0)
-            {
-                res += $"{mins} minute";
-                if (mins != 1)
-                    res += "s";
-                if (fcount > 1&&secs>0)
-                    res += ", and ";
-                else if (secs>0)
-                    res += " and ";
-            }
-            if (secs > 0)
-            {
-                res += $"{secs} second";
-                if (secs != 1)
-                    res += "s";
-            }
-            return res;
-        }
         public static List<int>? readHexCode(string s)
         {
             if (s.StartsWith("#"))
@@ -185,31 +136,6 @@ namespace MothBot
         {
             long time = (long)(ID >> 22) + 1420070400000;
             return DateTimeOffset.FromUnixTimeMilliseconds(time);
-        }
-        public static string TimestampToHumanFormat(DateTimeOffset time)
-        {
-            string desc = $"{time.TimeOfDay.ToString("hh")}:{time.TimeOfDay.ToString("mm")}:{time.TimeOfDay.ToString("ss")} of the {time.Day}";
-            switch (time.Day)
-            {
-                case 1:
-                case 21:
-                case 31:
-                    desc += "st";
-                    break;
-                case 2:
-                case 22:
-                    desc += "nd";
-                    break;
-                case 3:
-                case 23:
-                    desc += "rd";
-                    break;
-                default:
-                    desc += "th";
-                    break;
-            }
-            desc += $" of {time.ToString("MMMM", CultureInfo.InvariantCulture)}, {time.Year}";
-            return desc;
         }
         public static List<string> parseQuotes(string str)
         {
@@ -311,12 +237,14 @@ namespace MothBot
                 delay = 0;
             var channel = (ISocketMessageChannel)guild.GetChannel(timer.Channel);
             var timeToFire = timer.TimeToFire;
-            var msg = $"<@{timer.User}>: here is your reminder.";
+            string msg;
             if (late)
             {
                 var currentTime = Convert.ToUInt64(((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds());
-                msg += $" Due to the bot being offline, the end of the timer has been delayed by {Func.convertSeconds(currentTime-timer.TimeToFire)}.";
+                msg = Localisation.GetLoc("Reminder", Info.usersDict[timer.User].Language, Context1: timer.User.ToString(), number:currentTime - timer.TimeToFire, boolean:true);
             }
+            else
+                msg = Localisation.GetLoc("Reminder", Info.usersDict[timer.User].Language, Context1: timer.User.ToString());
             Thread.Sleep(delay * 1000);
             if (!Info.guildsDict[guild.Id].Timers.Any(tt => tt.Name.Equals(timer.Name, StringComparison.OrdinalIgnoreCase) && !tt.Paused && tt.TimeToFire == timeToFire))
                 return;
@@ -327,6 +255,18 @@ namespace MothBot
             eb.WithColor(51, 127, 213);
             await channel.SendMessageAsync(msg,false,eb.Build());
             return;
+        }
+        int IntPow(int x, uint pow)
+        {
+            int ret = 1;
+            while (pow != 0)
+            {
+                if ((pow & 1) == 1)
+                    ret *= x;
+                x *= x;
+                pow >>= 1;
+            }
+            return ret;
         }
     }
     public class HelpHandler : ModuleBase<SocketCommandContext>
@@ -906,12 +846,12 @@ namespace MothBot
             if (discordID == 0)
             {
                 var currentTime = DateTimeOffset.UtcNow;
-                eb.WithDescription($"The current time by the Coordinated Universal Time is {Func.TimestampToHumanFormat(currentTime)}");
+                eb.WithDescription(Localisation.GetLoc("CurrentTime", Info.usersDict[Context.User.Id].Language, time:currentTime));
                 await Context.Channel.SendMessageAsync("", false, eb.Build());
                 return;
             }
             var time = Func.DiscordIDToTimestamp(discordID);
-            eb.WithDescription($"This discord ID originates from {Func.TimestampToHumanFormat(time)} by the Coordinated Universal Time");
+            eb.WithDescription(Localisation.GetLoc("IDTime", Info.usersDict[Context.User.Id].Language, time: time));
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
         [Command("poll")]

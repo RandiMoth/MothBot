@@ -36,8 +36,8 @@ namespace MothBot
             if (itemInfo.Price.PricePortion != 0)
                 desc += $"­ ­ ­ ­ {itemInfo.Price.PricePortion * 100}% total moth amount: {(ulong)Math.Ceiling(itemInfo.Price.PricePortion * Info.usersDict[Context.User.Id].MothAmount)}\n";
             desc += $"­ ­ ­ ­ {itemInfo.Price.Tax * 100}% tax: {EconomyFunc.calcTaxPrice(itemInfo.Price.Tax, Info.usersDict[Context.User.Id].MothAmount, itemInfo.Price.BasePrice * 3)}\n";
-            if (itemInfo.Cooldown != 0)
-                desc += $"\nThis item can only be purchased once every {Func.convertSeconds(itemInfo.Cooldown)}.\n";
+            //if (itemInfo.Cooldown != 0)
+                //desc += $"\nThis item can only be purchased once every {Func.convertSeconds(itemInfo.Cooldown)}.\n";
             if (itemInfo.Max != 0)
                 desc += $"\nYou cannot have more than {itemInfo.Max} of this item.\n";
             desc += $"\nYou currently have {Info.usersDict[Context.User.Id].MothAmount} moth";
@@ -108,7 +108,7 @@ namespace MothBot
                     if (thisTime - lastTime < itemInfo.Cooldown)
                     {
                         eb.WithColor(224, 33, 33);
-                        eb.WithDescription($"You can't buy this item yet as it's on a cooldown of {Func.convertSeconds(itemInfo.Cooldown)}!\n\nYou'll be able to purchase this item in {Func.convertSeconds(lastTime - thisTime + itemInfo.Cooldown)}.");
+                        //eb.WithDescription($"You can't buy this item yet as it's on a cooldown of {Func.convertSeconds(itemInfo.Cooldown)}!\n\nYou'll be able to purchase this item in {Func.convertSeconds(lastTime - thisTime + itemInfo.Cooldown)}.");
                         await Context.Channel.SendMessageAsync("", embed: eb.Build());
                         return;
                     }

@@ -78,34 +78,25 @@ namespace MothBot
                 claimedReward = true;
             }
             var eb = new EmbedBuilder();
-            string desc = "";
-            string title = "";
+            string desc;
+            string title;
             if (claimedReward)
             {
-                title = "You have claimed your daily reward!";
-                desc += $"You currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
+                title = Localisation.GetLoc("DailyRewardTitle", Info.usersDict[Context.User.Id].Language);
+                desc = Localisation.GetLoc("DailyRewardDesc", Info.usersDict[Context.User.Id].Language, (SocketGuildUser)Context.User);
                 eb.WithColor(72, 139, 48);
             }
             else
             {
-                title = "You can't claim your daily reward yet.";
-                desc += $"{Func.convertSeconds((lastTime + 1) * 86400 - thisTime)}";
-                if (desc.EndsWith("s"))
-                    desc += " remain";
-                else
-                    desc += " remains";
-                desc += $" until your next daily reward.\n\nYou currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
+                title = Localisation.GetLoc("DailyEarlyTitle", Info.usersDict[Context.User.Id].Language);
+                desc = Localisation.GetLoc("DailyEarlyDesc", Info.usersDict[Context.User.Id].Language, (SocketGuildUser)Context.User, number: (lastTime + 1) * 86400 - thisTime);
                 eb.WithColor(224, 33, 33);
             }
-            if (Info.usersDict[Context.User.Id].MothAmount != 1)
-                desc += "s.";
-            else
-                desc += ".";
-            desc += $"\n\n*Currently viewing {Context.Message.Author.Mention}*";
             eb.WithTitle(title);
             eb.WithDescription(desc);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
+#if !DEBUG
         [Command("search")]
         [Summary("You go outside and touch a moth on grass.\n\nUsage: `m!search`")]
         [Alias("outside", "s")]
@@ -113,41 +104,41 @@ namespace MothBot
         {
             if (Context.Channel.Id == 608912123317321744)
             {
-                await Context.Channel.SendMessageAsync("Searching for moths has been disabled in <#608912123317321744>, please move to <#935420527051419688>.");
+                await Context.Channel.SendMessageAsync(Localisation.GetLoc("SearchDisabled", Info.usersDict[Context.User.Id].Language));
                 return;
             }
             var eb = new EmbedBuilder();
             var lastTime = Info.usersDict[Context.User.Id].LastTimes.Search;
             ulong thisTime = Convert.ToUInt64(Context.Message.Timestamp.ToUnixTimeSeconds());
             bool claimedReward = false;
-            string title = "";
-            string desc = "";
+            string title = "UNASSIGNED: should never happen";
+            string desc;
             if (thisTime - 30 >= lastTime)
             {
                 Info.usersDict[Context.User.Id].LastTimes.Search = thisTime;
                 Random rand = new Random(DateTime.Now.ToString().GetHashCode());
                 int rv = rand.Next() % 100;
-                Console.WriteLine(rv + " " + Context.User.Username);
+                //Console.WriteLine(rv + " " + Context.User.Username);
                 if (rv <= 1)
                 {
-                    title += $"You've abducted a moth from outside! It seems to be shiny, worth 100 times as much!";
+                    title = Localisation.GetLoc("ShinyMoth", Info.usersDict[Context.User.Id].Language);
                     Info.usersDict[Context.User.Id].MothAmount += 100;
                     eb.WithColor(72, 139, 48);
                 }
                 else if (rv < 15)
                 {
-                    title += $"You've abducted a cluster of moths from outside! Seems as if there were 5.";
+                    title = Localisation.GetLoc("ClusterMoth", Info.usersDict[Context.User.Id].Language);
                     Info.usersDict[Context.User.Id].MothAmount += 5;
                     eb.WithColor(72, 139, 48);
                 }
                 else if (rv >= 80)
                 {
-                    title += $"Seems like there wasn't anyone outside.";
+                    title = Localisation.GetLoc("RipBozo", Info.usersDict[Context.User.Id].Language);
                     eb.WithColor(224, 33, 33);
                 }
                 else
                 {
-                    title += $"You've abducted a moth from outside!";
+                    title = Localisation.GetLoc("MothCatch", Info.usersDict[Context.User.Id].Language);
                     Info.usersDict[Context.User.Id].MothAmount += 1;
                     eb.WithColor(72, 139, 48);
                 }
@@ -155,29 +146,19 @@ namespace MothBot
             }
             if (claimedReward)
             {
-                desc += $"You currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
+                desc = Localisation.GetLoc("MothCatchDesc", Info.usersDict[Context.User.Id].Language);
             }
             else
             {
-                title = "You're too tired to touch grass.";
-                desc += $"{Func.convertSeconds(lastTime + 30 - thisTime)}";
-                if (desc.EndsWith("s"))
-                    desc += " remain";
-                else
-                    desc += " remains";
-                desc += $" until you're next able to go outside.\n\nYou currently have **{Info.usersDict[Context.User.Id].MothAmount}** moth";
+                title = Localisation.GetLoc("MothFail", Info.usersDict[Context.User.Id].Language);
+                desc = Localisation.GetLoc("MothFailDesc", Info.usersDict[Context.User.Id].Language);
                 eb.WithColor(224, 33, 33);
             }
-            if (Info.usersDict[Context.User.Id].MothAmount != 1)
-                desc += "s.";
-            else
-                desc += ".";
-            desc += $"\n\n*Currently viewing {Context.Message.Author.Mention}*";
             eb.WithTitle(title);
             eb.WithDescription(desc);
             await Context.Channel.SendMessageAsync("", false, eb.Build());
         }
-
+#endif
         [Command("balance")]
         [Summary("Checks the amount of moths you currently have.\n\nUsage: `m!balance`")]
         [Alias("bal", "b", "wallet")]

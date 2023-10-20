@@ -23,6 +23,35 @@ PollFooter: This poll has been created by /f
 PollSuccess: The poll has been sent.
 PollMessage: Discuss this poll in the thread, such as why you've picked an option. If the poll has an "Other" option, you can say what you've picked that doesn't fall in the options.
 
+DailyRewardTitle: You have claimed your daily reward!
+DailyEarlyTitle: You can't claim your daily reward yet.
+DailyRewardDesc: $FUNC|MothAmount$.$FUNC|CurrentlyViewing$
+DailyEarlyDesc: "/t remain$PLURALSECS||s$ until your daily reward. You currently have /m moth$PLURAL|/m|s$.$FUNC|CurrentlyViewing$"
+
+SearchDisabled: "Searching for moths has been disabled in <#608912123317321744>, please move to <#935420527051419688>."
+ShinyMoth: You've abducted a moth from outside! It seems to be shiny, worth 100 times as much!
+ClusterMoth: You've abducted a cluster of moths from outside! Seems as if there were 5.
+RipBozo: Seems like there wasn't anyone outside.
+MothCatch: You've abducted a moth from outside!
+MothCatchDesc: $FUNC|MothAmount$.$FUNC|CurrentlyViewing$
+MothFail: You're too tired to touch grass.
+MothFailDesc: /t remain$PLURALSECS||s$ until you're next able to go outside./r/r$FUNC|MothAmount$.$FUNC|CurrentlyViewing$
+
+CurrentlyViewing: "/r/r*Currently viewing $MENTION|USER$.*"
+MothAmount: "You currently have **/m** moth$PLURAL|/m|s$"
+PureMothAmount: "**/m** moth$PLURAL|/m|s$"
+
+CurrentTime: The current time by the Coordinated Universal Time is /d.
+IDTime: This discord ID originates from /d by the Coordinated Universal Time.
+Reminder: "$MENTION|USER|/1$: Here is your reminder.$IF|/b| Due to the bot being offline, the end of the timer has been delayed by /t.|$"
+TimerFor: "/rTimer for /t./r/r"
+TimerPaused: "*This timer is currently paused*. If unpaused right now, it would end in /t"
+TimerActive: "This timer is currently active and will end <t:/i:R>$."
+TimerPause: "The timer /1 has been paused. If unpaused, it will end in /t"
+TimerRemaining: "/rCurrently paused, with /t remaining."
+TimerExtendedUnpaused: "If unpaused, it will end in /t"
+
+
 NoEmoji: Couldn't find the emoji!
 NoServer: Couldn't find the server!
 NoChannel: Couldn't find the channel!
