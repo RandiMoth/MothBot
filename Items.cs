@@ -122,38 +122,14 @@ namespace MothBot
             if (price != 1)
                 desc += "s";
             desc += "?";
-            var builder = new ComponentBuilder()
-                .WithButton("Confirm", "confirmation-confirm", ButtonStyle.Success)
-                .WithButton("Cancel", "confirmation-cancel", ButtonStyle.Danger);
-
-            var message = await Context.Channel.SendMessageAsync(desc, components: builder.Build());
             var newConfirmation = new Confirmation()
             {
-                MessageID = message.Id,
-                ChannelID = Context.Channel.Id,
-                GuildID = Context.Guild.Id,
                 ULongArgument1 = price,
                 ULongArgument2 = EconomyFunc.calcTaxPrice(itemInfo.Price.Tax, Info.usersDict[Context.User.Id].MothAmount, itemInfo.Price.BasePrice * 3),
                 ItemArgument1 = itemInfo,
                 Purpose = "buyItem"
             };
-            Info.confirmations.Add(Context.User.Id, newConfirmation);
-            var childref = new ThreadStart(ItemConfirmSetup);
-            Thread childThread = new Thread(childref);
-            childThread.Start();
-        }
-
-        private async void ItemConfirmSetup()
-        {
-            var messageID = Info.confirmations[Context.User.Id].MessageID;
-            var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
-            Thread.Sleep(10000);
-            if (Info.confirmations.ContainsKey(Context.User.Id) && Info.confirmations[Context.User.Id].MessageID == messageID)
-            {
-                await Context.Channel.SendMessageAsync("Item purchase cancelled!");
-                Info.confirmations.Remove(Context.User.Id);
-                Func.disableButtons(message);
-            }
+            newConfirmation.Setup(Context, desc);
         }
         [Command("mute")]
         [Summary("Mutes the specified user.\n\nUsage: `m!mute <user>`")]
@@ -207,47 +183,12 @@ namespace MothBot
                 return;
             }
             string desc = $"Are you sure you want to mute {user.Mention} for 5 minutes?";
-            var builder = new ComponentBuilder()
-                .WithButton("Confirm", "confirmation-confirm", ButtonStyle.Success)
-                .WithButton("Cancel", "confirmation-cancel", ButtonStyle.Danger);
-
-            var message = await Context.Channel.SendMessageAsync(desc, components: builder.Build());
             var newConfirmation = new Confirmation()
             {
-                MessageID = message.Id,
-                ChannelID = Context.Channel.Id,
-                GuildID = Context.Guild.Id,
                 ULongArgument1 = user.Id,
                 Purpose = "muteUser"
             };
-            Info.confirmations.Add(Context.User.Id, newConfirmation);
-            var childref = new ThreadStart(MuteConfirmSetup);
-            Thread childThread = new Thread(childref);
-            childThread.Start();
-            /*await user.AddRoleAsync(muteRole);
-            if (!user.Roles.Any(x => x.Id == muteRole.Id))
-            {
-                eb.WithDescription("Failed to assign the role. Perhaps the bot is lacking permissions to do so?");
-                eb.WithColor(224, 33, 33);
-                await Context.Channel.SendMessageAsync("", false, eb.Build());
-                return;
-            }
-            eb.WithDescription($"{user.Mention} has been muted for 5 minutes.");
-            eb.WithColor(72, 139, 48);
-            ClassSetups.usersDict[Context.User.Id].Items["muteitem"]--;*/
-        }
-
-        private async void MuteConfirmSetup()
-        {
-            var messageID = Info.confirmations[Context.User.Id].MessageID;
-            var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
-            Thread.Sleep(10000);
-            if (Info.confirmations.ContainsKey(Context.User.Id) && Info.confirmations[Context.User.Id].MessageID == messageID)
-            {
-                await Context.Channel.SendMessageAsync("Muting cancelled!");
-                Info.confirmations.Remove(Context.User.Id);
-                Func.disableButtons(message);
-            }
+            newConfirmation.Setup(Context, desc);
         }
     }
 }

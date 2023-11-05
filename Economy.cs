@@ -113,6 +113,7 @@ namespace MothBot
             bool claimedReward = false;
             string title = "UNASSIGNED: should never happen";
             string desc;
+            var user = (SocketGuildUser)Context.User;
             if (thisTime - 30 >= lastTime)
             {
                 Info.usersDict[Context.User.Id].LastTimes.Search = thisTime;
@@ -146,12 +147,12 @@ namespace MothBot
             }
             if (claimedReward)
             {
-                desc = Localisation.GetLoc("MothCatchDesc", Info.usersDict[Context.User.Id].Language);
+                desc = Localisation.GetLoc("MothCatchDesc", Info.usersDict[Context.User.Id].Language, user);
             }
             else
             {
                 title = Localisation.GetLoc("MothFail", Info.usersDict[Context.User.Id].Language);
-                desc = Localisation.GetLoc("MothFailDesc", Info.usersDict[Context.User.Id].Language);
+                desc = Localisation.GetLoc("MothFailDesc", Info.usersDict[Context.User.Id].Language, user);
                 eb.WithColor(224, 33, 33);
             }
             eb.WithTitle(title);
@@ -333,33 +334,13 @@ namespace MothBot
                 .WithButton("Confirm", "confirmation-confirm", ButtonStyle.Success)
                 .WithButton("Cancel", "confirmation-cancel", ButtonStyle.Danger);
 
-            var message = await Context.Channel.SendMessageAsync(desc, components: builder.Build());
             var newConfirmation = new Confirmation()
             {
-                MessageID = message.Id,
-                ChannelID = Context.Channel.Id,
-                GuildID = Context.Guild.Id,
                 ULongArgument1 = recipient.Id,
                 ULongArgument2 = mothAmount,
                 Purpose = "gift"
             };
-            Info.confirmations.Add(Context.User.Id, newConfirmation);
-            var childref = new ThreadStart(GiftConfirmSetup);
-            Thread childThread = new Thread(childref);
-            childThread.Start();
-        }
-
-        private async void GiftConfirmSetup()
-        {
-            var messageID = Info.confirmations[Context.User.Id].MessageID;
-            var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
-            Thread.Sleep(10000);
-            if (Info.confirmations.ContainsKey(Context.User.Id) && Info.confirmations[Context.User.Id].MessageID == messageID)
-            {
-                await Context.Channel.SendMessageAsync("Gifting cancelled!");
-                Info.confirmations.Remove(Context.User.Id);
-                Func.disableButtons(message);
-            }
+            newConfirmation.Setup(Context, desc);
         }
 
         [Command("inventory")]

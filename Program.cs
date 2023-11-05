@@ -236,7 +236,7 @@ namespace MothBot
                 return;
             //Console.WriteLine(_client.GetGuild(496015504516055042).Name);
             if (Info.confirmations.ContainsKey(message.Author.Id) && (Info.confirmations[message.Author.Id].Purpose!="help"||message.Content.Trim()=="m!help"))
-                ConfirmationResponses.cancelConfirmation(message.Author.Id, _client);
+                Info.confirmations[message.Author.Id].Cancel(message.Author.Id, _client);
 
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_client, message);
@@ -269,7 +269,7 @@ namespace MothBot
                 // Since we set our buttons custom id as 'custom-id', we can check for it like this:
                 case "confirmation-cancel":
                     if (Info.confirmations.ContainsKey(userID) && Info.confirmations[userID].MessageID == messageID)
-                        ConfirmationResponses.cancelConfirmation(userID, _client);
+                        Info.confirmations[userID].Cancel(userID, _client);
                     await component.DeferAsync();
                     break;
                 case "confirmation-confirm":

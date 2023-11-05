@@ -256,7 +256,7 @@ namespace MothBot
             await channel.SendMessageAsync(msg,false,eb.Build());
             return;
         }
-        int IntPow(int x, uint pow)
+        public static int IntPow(int x, uint pow)
         {
             int ret = 1;
             while (pow != 0)
@@ -279,7 +279,7 @@ namespace MothBot
         }
 
         [Command("help")]
-        [Alias("commands", "h")]
+        [Alias("commands")]
         [Summary("Information on how to use a command.\n\nUsage: `m!help [Command name]`")]
         public async Task HelpAsync([Remainder][Summary("The name of the command")] string command = "")
         {
@@ -314,18 +314,11 @@ namespace MothBot
                 }
                 var comp = new ComponentBuilder();
                 comp.WithSelectMenu(menuBuilder);
-                var newMessage = await Context.Channel.SendMessageAsync("", false, builder.Build(), components: comp.Build());
                 var newConfirmation = new Confirmation()
                 {
-                    MessageID = newMessage.Id,
-                    ChannelID = Context.Channel.Id,
-                    GuildID = Context.Guild.Id,
                     Purpose = "help"
                 };
-                Info.confirmations.Add(Context.User.Id, newConfirmation);
-                var childref = new ThreadStart(HelpDisablingSetup);
-                Thread childThread = new Thread(childref);
-                childThread.Start();
+                newConfirmation.Setup(Context, builder, comp);
             }
         }
         public static async Task ModuleHelpAsync(string moduleName, SocketGuildUser user, CommandService _service, IUserMessage message)
@@ -359,18 +352,6 @@ namespace MothBot
             var comp = new ComponentBuilder();
             comp.WithSelectMenu(menuBuilder);
             await message.ModifyAsync(x => { x.Embed = builder.Build(); x.Components = comp.Build(); }) ;
-        }
-
-        private void HelpDisablingSetup()
-        {
-            var messageID = Info.confirmations[Context.User.Id].MessageID;
-            var message = (IUserMessage)Context.Channel.GetMessageAsync(messageID).Result;
-            Thread.Sleep(30000);
-            if (Info.confirmations.ContainsKey(Context.User.Id))
-            {
-                Info.confirmations.Remove(Context.User.Id);
-                Func.disableButtons(message);
-            }
         }
         public async Task CommandHelpAsync([Remainder][Summary("The name of the command")] string command)
         {

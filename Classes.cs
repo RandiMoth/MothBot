@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Channels;
 using YamlDotNet.Serialization;
 
 namespace MothBot
@@ -79,16 +80,6 @@ namespace MothBot
         public Dictionary<string, ulong> Items = new Dictionary<string, ulong>();
     }
 #endif
-    public class Confirmation
-    {
-        public ulong GuildID { get; set; }      //The guild the confirmation is in
-        public ulong MessageID { get; set; }    //The message the confirmation was made in
-        public ulong ChannelID { get; set; }    //The channel the confirmation was made in
-        public string Purpose { get; set; } = "Default";
-        public ulong ULongArgument1 { get; set; }
-        public ulong ULongArgument2 { get; set; }
-        public Item? ItemArgument1 { get; set; }
-    }
     public class LastTimes
     {
         public ulong Daily { get; set; } = 0;
@@ -108,6 +99,80 @@ namespace MothBot
         public ulong Channel { get; set; } = 0;
         public ulong Author { get; set; } = 0;
         public bool Disabled { get; set; } = false;
+    }
+    /* How to set up a new confirmation:
+     * 1. Come up with a unique name, e.g. newConf
+     * 2. Edit the Confirmation's Cancel function to include a new message for cancelling it
+     * 3. Create a function that does whatever needs to be confirmed and include firing it in the switch of confirmConfirmation.
+     * 4. Inside of the command where the confirmation should spawn:
+     * 4.1. Create a new confirmation, with the Purpose filled in as that unique name. Other arguments may be added as necessary. Example: var newConfirmation = new Confirmation() { Purpose = "Default" };
+     * 4.2. Execute Setup on the new confirmation, with context and description.
+    */
+    public class Confirmation
+    {
+        public ulong GuildID { get; set; }      //The guild the confirmation is in
+        public ulong MessageID { get; set; }    //The message the confirmation was made in
+        public ulong ChannelID { get; set; }    //The channel the confirmation was made in
+        public string Purpose { get; set; } = "Default";
+        public ulong ULongArgument1 { get; set; }
+        public ulong ULongArgument2 { get; set; }
+        public Item? ItemArgument1 { get; set; }
+        public async void Setup(SocketCommandContext Context, string desc)
+        {
+            ChannelID = Context.Channel.Id;
+            GuildID = Context.Guild.Id;
+            var builder = new ComponentBuilder()
+                .WithButton("Confirm", "confirmation-confirm", ButtonStyle.Success)
+                .WithButton("Cancel", "confirmation-cancel", ButtonStyle.Danger);
+            var message = await Context.Channel.SendMessageAsync(desc, components: builder.Build());
+            MessageID = message.Id;
+            Info.confirmations.Add(Context.User.Id, this);
+            var t = new Thread(() => SetupThread(Context, message));
+            t.Start();
+        }
+        public async void Setup(SocketCommandContext Context, EmbedBuilder eb, ComponentBuilder components) // Specific for Help
+        {
+            ChannelID = Context.Channel.Id;
+            GuildID = Context.Guild.Id;
+            var message = await Context.Channel.SendMessageAsync("", false, eb.Build(), components: components.Build());
+            MessageID = message.Id;
+            Info.confirmations.Add(Context.User.Id, this);
+            var t = new Thread(() => SetupThread(Context, message, 30000));
+            t.Start();
+        }
+        public async void SetupThread(SocketCommandContext Context, IUserMessage message, int timeout = 10000)
+        {
+            Thread.Sleep(timeout);
+            if (Info.confirmations.ContainsKey(Context.User.Id) && Info.confirmations[Context.User.Id].MessageID == MessageID)
+            {
+                Cancel(Context.User.Id, Context.Client);
+            }
+        }
+        public async void Cancel(ulong userID, DiscordSocketClient _client)
+        {
+            Info.confirmations.Remove(userID);
+            var guild = _client.GetGuild(GuildID);
+            var channel = (ISocketMessageChannel)guild.GetChannel(ChannelID);
+            var message = (IUserMessage)channel.GetMessageAsync(MessageID).Result;
+            Func.disableButtons(message);
+            switch (Purpose)
+            {
+                case "gift":
+                    await channel.SendMessageAsync("Gifting cancelled!");
+                    break;
+                case "buyItem":
+                    await channel.SendMessageAsync("Item purchase cancelled!");
+                    break;
+                case "help":
+                    break;
+                case "muteUser":
+                    await channel.SendMessageAsync("Muting cancelled!");
+                    break;
+                default:
+                    await channel.SendMessageAsync("This should never appear. Ping Randi if it does, may Moth be with you.");
+                    break;
+            }
+        }
     }
     public class ConfirmationResponses
     {
@@ -131,33 +196,7 @@ namespace MothBot
                     MuteConfirm(context, userID, confirmation.ULongArgument1);
                     break;
                 default:
-                    await channel.SendMessageAsync("This should never appear. Ping Randy if it does pls, may the Moth be with you.");
-                    break;
-            }
-        }
-        public static async void cancelConfirmation(ulong userID, DiscordSocketClient _client)
-        {
-            var confirmation = Info.confirmations[userID];
-            Info.confirmations.Remove(userID);
-            var guild = _client.GetGuild(confirmation.GuildID);
-            var channel = (ISocketMessageChannel)guild.GetChannel(confirmation.ChannelID);
-            var message = (IUserMessage)channel.GetMessageAsync(confirmation.MessageID).Result;
-            Func.disableButtons(message);
-            switch (confirmation.Purpose)
-            {
-                case "gift":
-                    await channel.SendMessageAsync("Gifting cancelled!");
-                    break;
-                case "buyItem":
-                    await channel.SendMessageAsync("Item purchase cancelled!");
-                    break;
-                case "help":
-                    break;
-                case "muteUser":
-                    await channel.SendMessageAsync("Muting cancelled!");
-                    break;
-                default:
-                    await channel.SendMessageAsync("This should never appear. Ping Randy if it does pls, may the Moth be with you.");
+                    await channel.SendMessageAsync("This should never appear. Ping Randi if it does, may Moth be with you.");
                     break;
             }
         }
